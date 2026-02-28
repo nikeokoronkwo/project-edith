@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Sentinel — Data Insights & Metric Brainstorm</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #08080d;
+    --surface: #101018;
+    --surface2: #181824;
+    --border: #252535;
+    --text: #d8d8e8;
+    --dim: #7878a0;
+    --red: #ff3355;
+    --orange: #ff9933;
+    --yellow: #ffdd44;
+    --green: #33dd88;
+    --cyan: #33ccdd;
+    --blue: #4488ff;
+    --purple: #aa55ff;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif; line-height:1.7; }
+  .wrap { max-width:1100px; margin:0 auto; padding:0 28px; }
+  
+  .hero { padding:70px 28px 50px; text-align:center; }
+  .hero h1 { font-size:clamp(2rem,5vw,3.5rem); font-weight:900; letter-spacing:-2px; background:linear-gradient(135deg,var(--cyan),var(--blue),var(--purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .hero .sub { font-family:'JetBrains Mono',monospace; font-size:.75rem; color:var(--dim); letter-spacing:3px; text-transform:uppercase; margin-top:12px; }
+  
+  h2 { font-size:1.5rem; font-weight:700; margin:48px 0 8px; letter-spacing:-.5px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+  h2 .num { font-family:'JetBrains Mono',monospace; font-size:.65rem; color:var(--purple); background:rgba(170,85,255,.12); padding:3px 8px; border-radius:12px; letter-spacing:2px; margin-right:10px; vertical-align:middle; }
+  
+  h3 { font-size:1.1rem; font-weight:700; margin:24px 0 8px; color:var(--cyan); }
+  
+  p, li { font-size:.9rem; color:var(--dim); }
+  p { margin-bottom:14px; }
+  
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:24px 28px; margin:16px 0; position:relative; }
+  .card.red { border-left:3px solid var(--red); }
+  .card.green { border-left:3px solid var(--green); }
+  .card.blue { border-left:3px solid var(--blue); }
+  .card.orange { border-left:3px solid var(--orange); }
+  .card.purple { border-left:3px solid var(--purple); }
+  .card.cyan { border-left:3px solid var(--cyan); }
+  .card.yellow { border-left:3px solid var(--yellow); }
+  
+  .card h4 { font-size:1rem; font-weight:700; color:var(--text); margin-bottom:8px; }
+  .card .metric { font-family:'JetBrains Mono',monospace; font-size:.72rem; color:var(--purple); background:rgba(170,85,255,.08); display:inline-block; padding:2px 8px; border-radius:6px; margin:2px 4px 2px 0; }
+  .card .field { font-family:'JetBrains Mono',monospace; font-size:.72rem; color:var(--cyan); background:rgba(51,204,221,.08); display:inline-block; padding:2px 8px; border-radius:6px; margin:2px 4px 2px 0; }
+  .card .display { font-family:'JetBrains Mono',monospace; font-size:.72rem; color:var(--green); background:rgba(51,221,136,.08); display:inline-block; padding:2px 8px; border-radius:6px; margin:2px 4px 2px 0; }
+  .card .source { font-family:'JetBrains Mono',monospace; font-size:.72rem; color:var(--orange); background:rgba(255,153,51,.08); display:inline-block; padding:2px 8px; border-radius:6px; margin:2px 4px 2px 0; }
+  
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media(max-width:768px){ .grid2{grid-template-columns:1fr;} }
+  
+  .formula { font-family:'JetBrains Mono',monospace; font-size:.82rem; color:var(--yellow); background:rgba(255,221,68,.06); border:1px solid rgba(255,221,68,.15); border-radius:8px; padding:12px 16px; margin:10px 0; display:block; }
+  
+  .flow-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:12px 0; }
+  .flow-box { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:6px 14px; font-size:.78rem; color:var(--text); }
+  .flow-arr { color:var(--purple); font-weight:700; }
+  
+  .tag-row { margin:8px 0; }
+  
+  .highlight { color:var(--text); font-weight:600; }
+  .warn { color:var(--red); }
+  .good { color:var(--green); }
+  .info { color:var(--blue); }
+  
+  table { width:100%; border-collapse:collapse; margin:12px 0; font-size:.82rem; }
+  th { font-family:'JetBrains Mono',monospace; font-size:.68rem; color:var(--dim); text-transform:uppercase; letter-spacing:1px; text-align:left; padding:10px 12px; border-bottom:1px solid var(--border); }
+  td { padding:10px 12px; border-bottom:1px solid rgba(37,37,53,.7); }
+  tr:hover td { background:rgba(170,85,255,.03); }
+  
+  .section-intro { color:var(--dim); font-size:.92rem; margin-bottom:20px; max-width:800px; }
+</style>
+</head>
+<body>
+<div class="hero">
+  <h1>Data Insights & Metric Brainstorm</h1>
+  <div class="sub">Project Sentinel · What to compute, how to display it, and why it matters</div>
+</div>
+
+<div class="wrap">
+
+<!-- ======================================== -->
+<!-- DISCOVERY 1: THE SNAP IS A STRESS TEST -->
+<!-- ======================================== -->
+<h2><span class="num">01</span> The Snap Event — Anomaly Mechanics</h2>
+<p class="section-intro">The "Thanos Snap" hits at Jan 1 19:00. Every sector experiences an instant ~50% stock drop in a single hour. But critically, some sectors show <span class="highlight">partial recovery the very next hour</span>. This isn't just a crash — it's a crash-and-scramble pattern. The data has 5 readings per hour per sector, and during the snap the readings diverge wildly (some sensors catch the drop, one may not). This is rich.</p>
+
+<div class="card red">
+  <h4>Insight: Snap Detection Algorithm</h4>
+  <div class="tag-row">
+    <span class="field">stock_level</span>
+    <span class="field">timestamp</span>
+    <span class="metric">hour-over-hour % change</span>
+    <span class="metric">cross-sector correlation</span>
+  </div>
+  <p><span class="highlight">The data:</span> At 18:00, Wakanda averages ~704 stock. At 19:00, the 5 readings split: one at 704 (normal), four between 334–377 (snapped). By 20:00 some readings bounce to 693 while others stay around 350. The snap isn't uniform — it's a probabilistic event where ~80% of sensors detect it.</p>
+  <p><span class="highlight">The computation:</span> For each hour, compute the average stock across the 5 readings. If the hour-over-hour change exceeds −30% AND this is correlated across 3+ sectors simultaneously, flag it as a "snap-class anomaly." Simple Z-score on the hourly delta works: anything beyond −2σ from the rolling mean delta gets flagged.</p>
+  <code class="formula">snap_score = |Δstock_avg(t)| / rolling_std(Δstock_avg, window=24h)<br>IF snap_score > 2.0 AND sectors_affected >= 3 → SNAP ALERT</code>
+  <p><span class="highlight">Display:</span> A timeline chart with a red vertical annotation line at the snap. Show a "before/after" comparison card: stock levels 1 hour pre-snap vs. post-snap for all 5 sectors. This becomes the centerpiece when judges ask "how did you handle the snap?"</p>
+  <div class="tag-row"><span class="display">annotated time-series chart</span> <span class="display">before/after comparison card</span> <span class="display">snap alert banner</span></div>
+</div>
+
+<div class="card orange">
+  <h4>Insight: Sensor Divergence as an Early Warning</h4>
+  <div class="tag-row">
+    <span class="field">stock_level (5 per hour)</span>
+    <span class="metric">intra-hour standard deviation</span>
+    <span class="metric">intra-hour spread (max − min)</span>
+  </div>
+  <p><span class="highlight">The data:</span> At hour 0 all 5 readings are identical (800.0). By hour 4, the spread is already 19.9. By hour 10 the 5 sensors are diverging by 28+. During the snap itself, a single hour has one reading at 704 and another at 334 — a spread of 370.</p>
+  <p><span class="highlight">The computation:</span> Compute std_dev and spread of the 5 readings each hour. A rising spread is a <span class="warn">precursor signal</span> that something unstable is happening. Normal divergence follows a pattern; snap divergence is an order of magnitude higher.</p>
+  <code class="formula">sensor_confidence = 1 - (std_dev(readings_t) / mean(readings_t))<br>IF sensor_confidence < 0.7 → "SENSOR INSTABILITY — verify readings"</code>
+  <p><span class="highlight">Display:</span> A "data confidence" indicator next to each stock reading. Green = all 5 sensors agree. Yellow = moderate spread. Red = sensors are wildly disagreeing. This is a subtle but powerful indicator that something is about to go wrong.</p>
+  <div class="tag-row"><span class="display">confidence badge per reading</span> <span class="display">sensor agreement sparkline</span></div>
+</div>
+
+<!-- ======================================== -->
+<!-- DISCOVERY 2: DEPLETION FORECASTING -->
+<!-- ======================================== -->
+<h2><span class="num">02</span> Depletion Forecasting — Going Beyond Linear</h2>
+<p class="section-intro">The naive approach is linear regression on stock_level over time. But the data is far more interesting: there are resupply events (stock jumps back up), the snap causes a discontinuity, and usage rates vary between 2–8/hr. Here are the specific forecasting models you could implement and what they'd show.</p>
+
+<div class="card blue">
+  <h4>Model A: Net Burn Rate with Resupply Detection</h4>
+  <div class="tag-row">
+    <span class="field">stock_level (hourly avg)</span>
+    <span class="field">usage_rate_hourly</span>
+    <span class="metric">net burn = consumption − resupply</span>
+    <span class="metric">time-to-zero</span>
+  </div>
+  <p><span class="highlight">The insight:</span> Resupply events are frequent (56–134 per sector over 17 days). Wakanda gets ~56 resupply bumps, but each resupply gets <em>smaller</em> over time: early resupplies add ~260 units, late ones add only ~50–60. The supply chain is degrading.</p>
+  <p><span class="highlight">The computation:</span> Separate consumption (stock goes down) from resupply (stock goes up) events. Compute avg consumption/hr and avg resupply/hr. The net burn rate = consumption − resupply. When net burn is positive, the sector is dying. When it flips to negative, they've stabilized.</p>
+  <code class="formula">net_burn_rate = avg(consumption_events/hr) − avg(resupply_events/hr)<br>time_to_zero = current_stock / net_burn_rate<br><br>Wakanda: consumption ≈ 5/hr, resupply_freq declining → net_burn accelerating</code>
+  <p><span class="highlight">Display:</span> Two lines on the chart — one for "consumption only" projection and one for "with resupply" projection. The gap between them narrows over time as resupply fails. Show the exact hour where they converge (point of no return).</p>
+  <div class="tag-row"><span class="display">dual-line forecast chart</span> <span class="display">"point of no return" marker</span> <span class="display">resupply health indicator</span></div>
+</div>
+
+<div class="card purple">
+  <h4>Model B: Monte Carlo Probability Cones</h4>
+  <div class="tag-row">
+    <span class="field">usage_rate_hourly (std_dev ≈ 1.73)</span>
+    <span class="field">resupply_magnitude (declining)</span>
+    <span class="metric">P(depletion) at each future hour</span>
+  </div>
+  <p><span class="highlight">The insight:</span> Usage rates have a standard deviation of ~1.73 across all sectors. That means any hour's consumption could be anywhere from ~1 to ~9 units. A single linear prediction hides this uncertainty.</p>
+  <p><span class="highlight">The computation:</span> Run 500–1000 simulations. Each simulation samples usage rates from a normal distribution with the sector's observed mean and std. Optionally include resupply as a probabilistic event (e.g., 15% chance per hour, magnitude drawn from historical resupply sizes). For each simulation, record when stock hits zero. Aggregate into percentile bands.</p>
+  <code class="formula">for sim in 1..1000:<br>&nbsp;&nbsp;for hour in future_hours:<br>&nbsp;&nbsp;&nbsp;&nbsp;usage = normal(mean=4.7, std=1.73)<br>&nbsp;&nbsp;&nbsp;&nbsp;resupply = bernoulli(p=0.15) * normal(mean=100, std=50)<br>&nbsp;&nbsp;&nbsp;&nbsp;stock -= usage; stock += resupply<br>&nbsp;&nbsp;&nbsp;&nbsp;if stock <= 0: record(depletion_hour); break<br><br>Result: P(depletion) = count(depleted) / 1000 at each hour</code>
+  <p><span class="highlight">Display:</span> A fan/cone chart. The center line is the median projection. The shaded bands show 50th percentile (dark) and 90th percentile (light). This gives commanders a range: "best case 3 days, worst case 18 hours, most likely 2 days."</p>
+  <div class="tag-row"><span class="display">probability cone chart</span> <span class="display">depletion probability ticker</span></div>
+</div>
+
+<div class="card green">
+  <h4>Model C: Snap-Aware Regime Detection</h4>
+  <div class="tag-row">
+    <span class="field">snap_event_detected</span>
+    <span class="field">stock_level (pre/post snap)</span>
+    <span class="metric">regime classification</span>
+    <span class="metric">separate forecast per regime</span>
+  </div>
+  <p><span class="highlight">The insight:</span> Pre-snap, sectors have 800–2500 starting stock and steady usage. Post-snap, the same sectors have ~half the stock but the same usage rate. Usage does NOT drop to match the lower supply. This means the snap cuts supply but not demand — a recipe for accelerated collapse.</p>
+  <p><span class="highlight">The computation:</span> Split the time series at the snap event. Train separate models for "normal regime" and "crisis regime." For forecasting, use the crisis-regime model since we're post-snap. Optionally, detect if a new snap is occurring and switch models in real-time.</p>
+  <code class="formula">Pre-snap avg usage: 4.73/hr, Post-snap avg usage: 5.16/hr (+9%)<br>→ Usage actually INCREASES post-snap (panic consumption?)<br>→ Crisis-regime model must account for demand surge</code>
+  <p><span class="highlight">Display:</span> The time-series chart with a clear visual divider between regimes. Different colored forecast lines for each regime. A "current regime" indicator badge on the dashboard.</p>
+  <div class="tag-row"><span class="display">regime-split chart</span> <span class="display">regime badge</span> <span class="display">demand surge indicator</span></div>
+</div>
+
+<!-- ======================================== -->
+<!-- DISCOVERY 3: RESUPPLY INTELLIGENCE -->
+<!-- ======================================== -->
+<h2><span class="num">03</span> Resupply Chain Intelligence</h2>
+<p class="section-intro">This is a finding most teams will miss. The stock doesn't just go down — it repeatedly bounces back up. These resupply events happen dozens of times per sector. But the resupply magnitude is declining over time. The supply chain is dying.</p>
+
+<div class="card cyan">
+  <h4>Insight: Supply Chain Health Score</h4>
+  <div class="tag-row">
+    <span class="field">stock_level jumps (Δ > +50)</span>
+    <span class="metric">resupply frequency (events/day)</span>
+    <span class="metric">resupply magnitude (avg units added)</span>
+    <span class="metric">supply chain health index</span>
+  </div>
+  <p><span class="highlight">The data:</span> Wakanda has 56 resupply events over 17 days. Early resupplies (Jan 1-3) average +150 units. Late resupplies (Jan 10+) average +60 units. The frequency also drops: from ~5/day to ~2/day. The supply chain is collapsing at both frequency AND magnitude.</p>
+  <code class="formula">supply_health = (resupply_freq_recent / resupply_freq_baseline) × (resupply_mag_recent / resupply_mag_baseline)<br><br>Wakanda: (2/5) × (60/150) = 0.16 → supply chain at 16% health</code>
+  <p><span class="highlight">Display:</span> A gauge/donut chart per sector showing "Supply Chain Health %" declining over time. Color-coded: green > 70%, yellow 30–70%, red < 30%. This is a leading indicator — it shows a sector is in trouble BEFORE stock hits zero.</p>
+  <div class="tag-row"><span class="display">supply chain health gauge</span> <span class="display">resupply trend sparkline</span> <span class="display">days-until-supply-chain-failure</span></div>
+</div>
+
+<div class="card orange">
+  <h4>Insight: "Secured Cache" Reports = Resupply Signals</h4>
+  <div class="tag-row">
+    <span class="source">field_intel_reports.json</span>
+    <span class="source">historical_avengers_data.csv</span>
+    <span class="metric">cross-validation score</span>
+  </div>
+  <p><span class="highlight">The connection:</span> 39 of 200 field reports are "Status update from {SECTOR}. We secured a cache of {RESOURCE}." These are the <em>human-reported resupply events</em>. If the LLM extracts "sector=Wakanda, resource=Clean Water, event_type=RESUPPLY" from these reports, you can cross-reference with the CSV to see if a corresponding stock increase actually appears in the time series.</p>
+  <p><span class="highlight">The catch:</span> 80% of "secured cache" reports mention a resource that the sector <em>doesn't actually track</em> in the CSV (e.g., Wakanda securing Clean Water when Wakanda only tracks Arc Reactor Cores). This is either noise or it implies there's a broader resource network the CSV doesn't capture.</p>
+  <p><span class="highlight">Display:</span> In the intel feed, when a "secured cache" report comes in, auto-link it to the relevant time series chart with a green marker. If the claim is verified by the data, show a ✓. If the sector doesn't track that resource, show a ⚠ with "Unverified — resource not tracked for this sector."</p>
+  <div class="tag-row"><span class="display">verified/unverified badge on report</span> <span class="display">auto-linked chart annotation</span></div>
+</div>
+
+<!-- ======================================== -->
+<!-- DISCOVERY 4: FIELD INTEL CLASSIFICATION -->
+<!-- ======================================== -->
+<h2><span class="num">04</span> Field Intel — Structured Entity Extraction</h2>
+<p class="section-intro">The 200 reports follow exactly 5 templates. The LLM's job is to extract structured fields from each one. Here's what each template yields and what you can compute from the extracted data.</p>
+
+<table>
+  <tr>
+    <th>Template (47–32 each)</th>
+    <th>Extractable Fields</th>
+    <th>Implied Severity</th>
+    <th>Action Type</th>
+  </tr>
+  <tr>
+    <td style="color:var(--red);">"critically low on {RESOURCE}"</td>
+    <td>sector, resource, severity=critical</td>
+    <td>CRITICAL — nearing depletion</td>
+    <td>Emergency resupply</td>
+  </tr>
+  <tr>
+    <td style="color:var(--orange);">"Heavy combat… supply chain compromised"</td>
+    <td>sector, resource, cause=combat, status=supply_chain_disrupted</td>
+    <td>HIGH — active threat to supply</td>
+    <td>Secure supply line + combat support</td>
+  </tr>
+  <tr>
+    <td style="color:var(--green);">"secured a cache of {RESOURCE}"</td>
+    <td>sector, resource, event_type=resupply</td>
+    <td>POSITIVE — incoming supply</td>
+    <td>Update stock forecast upward</td>
+  </tr>
+  <tr>
+    <td style="color:var(--yellow);">"situation is dire… we need more"</td>
+    <td>sector, resource, severity=dire, risk=perimeter_loss</td>
+    <td>CRITICAL — operational risk</td>
+    <td>Priority resupply + reinforcement</td>
+  </tr>
+  <tr>
+    <td style="color:var(--red);">"out of {RESOURCE}"</td>
+    <td>sector, resource, severity=depleted, reporter_name (PII!), phone (PII!)</td>
+    <td>DEPLETED — stock is zero</td>
+    <td>Immediate intervention</td>
+  </tr>
+</table>
+
+<div class="card blue">
+  <h4>Derived Metric: Sector Threat Score (combining both datasets)</h4>
+  <div class="tag-row">
+    <span class="source">CSV: stock_level, usage_rate</span>
+    <span class="source">JSON: report severity, report count</span>
+    <span class="metric">composite threat score 0–100</span>
+  </div>
+  <p><span class="highlight">The formula:</span> Weight multiple signals together into a single per-sector score:</p>
+  <code class="formula">threat_score = w1 × (1 − stock_pct) + w2 × depletion_velocity + w3 × critical_report_density + w4 × supply_chain_decay<br><br>where:<br>&nbsp;&nbsp;stock_pct = current_stock / max_stock<br>&nbsp;&nbsp;depletion_velocity = avg_usage / current_stock (hours to zero)<br>&nbsp;&nbsp;critical_report_density = critical_reports_last_6h / total_reports_last_6h<br>&nbsp;&nbsp;supply_chain_decay = 1 − supply_health_score<br><br>suggested weights: w1=0.3, w2=0.3, w3=0.2, w4=0.2</code>
+  <p><span class="highlight">This is the integration moment.</span> The threat score uses CSV data (stock levels, usage rates) AND JSON data (report severity, frequency). It's the single metric that proves both datasets are connected in your system. A sector can have moderate stock levels but a HIGH threat score if field reports are screaming about combat and supply disruption.</p>
+  <p><span class="highlight">Display:</span> Large, color-coded threat score card per sector on the main dashboard. Think "DEFCON level" styling: green (0–25), yellow (25–50), orange (50–75), red (75–100). Each card expandable to show which factors are driving the score.</p>
+  <div class="tag-row"><span class="display">threat score card per sector</span> <span class="display">factor breakdown drill-down</span> <span class="display">threat trend sparkline</span></div>
+</div>
+
+<div class="card purple">
+  <h4>Derived Metric: Intel Reliability Score</h4>
+  <div class="tag-row">
+    <span class="source">JSON: sector + resource claim</span>
+    <span class="source">CSV: actual stock for that sector</span>
+    <span class="metric">claim vs reality accuracy</span>
+  </div>
+  <p><span class="highlight">The insight:</span> 80% of reports mention a sector-resource pair that <em>doesn't match</em> the CSV's actual mapping (e.g., a report about Wakanda's Clean Water when Wakanda only tracks Arc Reactor Cores). Only 40 of 200 reports have a "correct" sector-resource match.</p>
+  <p><span class="highlight">Interpretation options:</span></p>
+  <p>1. <span class="info">Field confusion:</span> Operatives on the ground don't know which sector tracks which resource — they're reporting what they observe. The system should still log the claim but flag it as "unverifiable against telemetry."</p>
+  <p>2. <span class="info">Hidden supply needs:</span> Wakanda may need Clean Water even though the CSV only tracks Arc Reactor Cores there. The reports reveal unmonitored resource gaps. Your system should surface these as "blind spots" in sensor coverage.</p>
+  <p>3. <span class="info">Disinformation filtering:</span> If the data conflicts, maybe the report is wrong. A reliability scoring system could weight reports higher when they match known telemetry and lower when they don't.</p>
+  <code class="formula">reliability_score(report) = {<br>&nbsp;&nbsp;1.0 if sector-resource matches CSV AND stock_level confirms claim,<br>&nbsp;&nbsp;0.7 if sector matches but resource not tracked (plausible but unverified),<br>&nbsp;&nbsp;0.3 if claim contradicts CSV data (e.g., "critically low" but stock is high)<br>}</code>
+  <div class="tag-row"><span class="display">reliability badge on each report</span> <span class="display">verified vs unverified intel breakdown</span> <span class="display">sensor blind spot map</span></div>
+</div>
+
+<!-- ======================================== -->
+<!-- DISCOVERY 5: PII PATTERNS -->
+<!-- ======================================== -->
+<h2><span class="num">05</span> PII Detection — Specific Patterns in This Data</h2>
+<p class="section-intro">PII leaks are concentrated in exactly ONE template: the "out of" reports. All 34 PII-leaking reports follow the pattern: "Just a heads up, {SECTOR} is out of {RESOURCE}. This is {NAME}, call me back at {PHONE}." The name and phone always appear together. Here's exactly what to detect.</p>
+
+<div class="grid2">
+  <div class="card red">
+    <h4>Name Patterns to Catch</h4>
+    <p style="font-family:'JetBrains Mono',monospace; font-size:.78rem; color:var(--text);">
+      Tony Stark<br>
+      Natasha Romanoff<br>
+      Thor Odinson<br>
+      Peter Parker<br>
+      Bruce Banner<br>
+      Steve Rogers
+    </p>
+    <p>All appear as "This is {FULL_NAME}, call me back" — dictionary match on known names works. But for demo purposes, also add NER (spaCy/compromise.js) to show you'd catch unknown names too.</p>
+  </div>
+  <div class="card red">
+    <h4>Phone Patterns to Catch</h4>
+    <p style="font-family:'JetBrains Mono',monospace; font-size:.78rem; color:var(--text);">
+      555-0101 (Iron Line)<br>
+      555-0199 (Black Widow Comms)<br>
+      555-GOD-OF-THUNDER<br>
+      555-0123 (Spider-Sense)<br>
+      555-HULK-SMASH<br>
+      555-0100 (Captain Comms)<br>
+      555-1941 (Shield Freq)
+    </p>
+    <p>Mix of numeric (555-0101) and alphanumeric (555-GOD-OF-THUNDER). A single regex won't catch both. Need: <span class="metric">regex for 555-\d{4}</span> + <span class="metric">regex for 555-[A-Z-]+</span> + <span class="metric">catch the parenthetical suffix</span>.</p>
+  </div>
+</div>
+
+<div class="card orange">
+  <h4>Multi-Layer Redaction Pipeline — Specific Implementation</h4>
+  <div class="flow-row">
+    <div class="flow-box">Raw text input</div>
+    <span class="flow-arr">→</span>
+    <div class="flow-box" style="border-color:var(--red);">Layer 1: Regex<br><span style="font-size:.7rem;color:var(--dim);">555-[\w()-]+ patterns</span></div>
+    <span class="flow-arr">→</span>
+    <div class="flow-box" style="border-color:var(--orange);">Layer 2: Dictionary<br><span style="font-size:.7rem;color:var(--dim);">known hero names</span></div>
+    <span class="flow-arr">→</span>
+    <div class="flow-box" style="border-color:var(--yellow);">Layer 3: NER model<br><span style="font-size:.7rem;color:var(--dim);">catch unknown PERSON entities</span></div>
+    <span class="flow-arr">→</span>
+    <div class="flow-box" style="border-color:var(--green);">Redacted text to LLM</div>
+  </div>
+  <p><span class="highlight">Key demo detail:</span> 166 of 200 reports have NO PII in the raw_text (it's only in metadata). Make sure your demo shows one of the 34 "out of" reports — those are the ones with visible before/after redaction. If you accidentally demo a "critically low" report, there's nothing to redact and the security demo falls flat.</p>
+  <code class="formula">BEFORE: "Just a heads up, Sokovia is out of Vibranium (kg). This is Thor Odinson, call me back at 555-GOD-OF-THUNDER."<br><br>AFTER:  "Just a heads up, Sokovia is out of Vibranium (kg). This is [REDACTED-NAME], call me back at [REDACTED-PHONE]."<br><br>AUDIT LOG: { layer: "dictionary", entity: "Thor Odinson", type: "PERSON" }, { layer: "regex", entity: "555-GOD-OF-THUNDER", type: "PHONE" }</code>
+</div>
+
+<!-- ======================================== -->
+<!-- DISCOVERY 6: CROSS-DATASET RELATIONSHIPS -->
+<!-- ======================================== -->
+<h2><span class="num">06</span> The Integration Layer — Where Both Datasets Meet</h2>
+<p class="section-intro">This is the highest-value section. These are the specific moments where the CSV telemetry data and the JSON field reports reinforce, contradict, or extend each other.</p>
+
+<div class="card green">
+  <h4>Relationship 1: Report Volume Correlates with Stock Depletion</h4>
+  <div class="tag-row">
+    <span class="source">CSV: stock levels approaching zero</span>
+    <span class="source">JSON: report count per sector</span>
+    <span class="metric">reports-per-hour vs stock-pct</span>
+  </div>
+  <p>Reports are timestamped Jan 15–16, exactly when Wakanda (0 stock), Sokovia (0 stock), and Avengers Compound (0 stock) are fully depleted. Sanctum Sanctorum and New Asgard still have some stock. A model could show: as stock_pct drops below 20%, field report frequency spikes. This is the "human signal confirms the sensor signal" moment.</p>
+  <p><span class="highlight">Display:</span> Overlay report count as bar chart on top of the stock time-series line chart. Show the correlation visually: reports cluster where stock is lowest.</p>
+  <div class="tag-row"><span class="display">dual-axis chart: stock line + report bar overlay</span></div>
+</div>
+
+<div class="card green">
+  <h4>Relationship 2: Report Severity vs Actual Stock Level</h4>
+  <div class="tag-row">
+    <span class="source">JSON: priority field (Routine/High/Avengers Level Threat)</span>
+    <span class="source">CSV: stock_level at report timestamp</span>
+    <span class="metric">severity-weighted stock alert</span>
+  </div>
+  <p>The priority field in reports (Routine: 76, High: 63, Avengers Level: 61) is randomly assigned — it does NOT correlate with actual stock levels. A "Routine" report can say "critically low" while an "Avengers Level Threat" can be a cache secured. <span class="warn">This means the priority field is unreliable.</span></p>
+  <p><span class="highlight">The opportunity:</span> Your LLM-derived severity (from text analysis) is MORE accurate than the metadata priority. Show this! Display a comparison: "Report metadata says Routine. LLM text analysis says CRITICAL. CSV data confirms stock is at 0. → System overrides priority to CRITICAL." This is a powerful moment.</p>
+  <div class="tag-row"><span class="display">priority override badge</span> <span class="display">"AI-corrected severity" column</span></div>
+</div>
+
+<div class="card green">
+  <h4>Relationship 3: Unmonitored Resource Alerts (Blind Spots)</h4>
+  <div class="tag-row">
+    <span class="source">JSON: sector-resource pairs mentioned</span>
+    <span class="source">CSV: sector-resource pairs tracked</span>
+    <span class="metric">unmonitored resource flags</span>
+  </div>
+  <p>The CSV only tracks ONE resource per sector. But field reports mention ALL 5 resources across ALL 5 sectors. 160 of 200 reports reference a sector-resource pair that has no telemetry data. These are intelligence about problems the sensor network can't see.</p>
+  <p><span class="highlight">Display:</span> A 5×5 matrix (sectors × resources). The diagonal (tracked pairs) is filled with live data. Off-diagonal cells are grayed out but populated with "HUMINT only" flags from field reports. When a field report fills in an unmonitored cell, it lights up with a ⚠ icon. This instantly shows commanders where their sensor coverage has gaps.</p>
+  <div class="tag-row"><span class="display">sector × resource coverage matrix</span> <span class="display">HUMINT-only alert badges</span> <span class="display">sensor gap heatmap</span></div>
+</div>
+
+<div class="card green">
+  <h4>Relationship 4: Depletion Confirmation Chain</h4>
+  <div class="tag-row">
+    <span class="source">CSV: stock hits zero at specific timestamp</span>
+    <span class="source">JSON: "out of" reports near that timestamp</span>
+    <span class="metric">time-to-confirmation (telemetry → HUMINT)</span>
+  </div>
+  <p>When the CSV shows a sector's stock hitting 0, do field reports confirm it? Wakanda hit zero on Jan 5 in the CSV. Reports from Jan 15 say "Wakanda is out of Arc Reactor Cores." That's a 10-day lag between sensor detection and human report. For Sokovia (zero on Jan 5), reports on Jan 15–16 confirm "Sokovia is out of Pym Particles."</p>
+  <p><span class="highlight">Display:</span> A timeline showing telemetry zero-detection timestamp vs. first human confirmation report. The gap = "confirmation latency." Shorter = better field comms. This metric measures how fast the human network reacts vs. the automated sensors.</p>
+  <div class="tag-row"><span class="display">confirmation latency timeline</span> <span class="display">sensor-vs-human detection comparison</span></div>
+</div>
+
+<!-- ======================================== -->
+<!-- DISCOVERY 7: USAGE RATE ANOMALIES -->
+<!-- ======================================== -->
+<h2><span class="num">07</span> Usage Rate Intelligence</h2>
+
+<div class="card yellow">
+  <h4>Insight: Usage INCREASES When Stock Hits Zero (Phantom Demand)</h4>
+  <div class="tag-row">
+    <span class="field">usage_rate_hourly</span>
+    <span class="field">stock_level</span>
+    <span class="metric">usage at zero stock vs high stock</span>
+  </div>
+  <p><span class="highlight">The finding:</span> When stock is high (>500), average usage is ~4.3/hr. When stock hits ZERO, usage jumps to ~5.5/hr. That's a 28% increase in demand <em>when there's nothing left</em>. For Sanctum Sanctorum and New Asgard, the jump is even more dramatic: 4.7/hr at high stock → 7.4/hr at zero stock (57% increase).</p>
+  <p><span class="highlight">Interpretation:</span> This models panic consumption or black-market demand. When people know something is running out, they hoard. Or it could represent unmet demand that's being logged even though fulfillment is impossible. Either way, it's a critical forecasting input: once stock drops below a threshold, assume demand will SPIKE, not stay constant.</p>
+  <code class="formula">IF stock_pct < 10%:<br>&nbsp;&nbsp;adjusted_usage = base_usage × 1.28 (low-stock sectors)<br>&nbsp;&nbsp;adjusted_usage = base_usage × 1.57 (high-capacity sectors)<br><br>This tightens your time-to-zero estimate significantly</code>
+  <div class="tag-row"><span class="display">demand surge warning indicator</span> <span class="display">usage rate vs stock level scatter plot</span></div>
+</div>
+
+<div class="card cyan">
+  <h4>Insight: Two Tiers of Sectors</h4>
+  <div class="tag-row">
+    <span class="field">starting stock_level</span>
+    <span class="metric">time-to-first-zero</span>
+    <span class="metric">sector resilience tier</span>
+  </div>
+  <p><span class="highlight">The data clearly shows two groups:</span></p>
+  <p><span class="warn">Tier 1 — Fragile (start at 800 stock):</span> Wakanda, Sokovia, Avengers Compound. Hit zero by Jan 5 (~4.5 days). Low initial reserves. Completely depleted well before the reports come in.</p>
+  <p><span class="good">Tier 2 — Resilient (start at 2500 stock):</span> Sanctum Sanctorum, New Asgard. Don't hit zero until Jan 14 (~13 days). 3× the initial reserves. Still partially operational during the reporting period.</p>
+  <p><span class="highlight">Display:</span> Tier classification badges on each sector. A "sector resilience ranking" that orders sectors by remaining operational time. This helps commanders prioritize: Tier 1 sectors need immediate intervention, Tier 2 sectors have a window.</p>
+  <div class="tag-row"><span class="display">sector resilience ranking</span> <span class="display">tier classification badges</span> <span class="display">comparative depletion timeline</span></div>
+</div>
+
+<!-- ======================================== -->
+<!-- SUMMARY DASHBOARD LAYOUT -->
+<!-- ======================================== -->
+<h2><span class="num">08</span> Putting It All Together — Dashboard Layout Map</h2>
+<p class="section-intro">Here's how all these metrics could compose into a single-screen command dashboard, with every widget tied to a specific data source and computation.</p>
+
+<div class="card purple" style="padding:28px;">
+  <h4 style="margin-bottom:16px;">Proposed Dashboard Grid</h4>
+  <table>
+    <tr>
+      <th>Widget</th>
+      <th>Data Source</th>
+      <th>Core Metric</th>
+      <th>Update Trigger</th>
+    </tr>
+    <tr>
+      <td style="color:var(--red);">Sector Threat Cards (×5)</td>
+      <td>CSV + JSON (composite)</td>
+      <td>Threat score 0–100</td>
+      <td>New report or new reading</td>
+    </tr>
+    <tr>
+      <td style="color:var(--blue);">Time Series Chart</td>
+      <td>CSV stock_level</td>
+      <td>Stock + forecast + snap annotation</td>
+      <td>Page load / filter change</td>
+    </tr>
+    <tr>
+      <td style="color:var(--green);">Live Intel Feed</td>
+      <td>JSON reports (processed)</td>
+      <td>Extracted entities + severity + reliability</td>
+      <td>New report submitted</td>
+    </tr>
+    <tr>
+      <td style="color:var(--cyan);">Coverage Matrix (5×5)</td>
+      <td>CSV mapping + JSON mentions</td>
+      <td>Monitored vs HUMINT-only cells</td>
+      <td>New report analyzed</td>
+    </tr>
+    <tr>
+      <td style="color:var(--orange);">Supply Chain Health</td>
+      <td>CSV resupply events</td>
+      <td>Resupply freq + magnitude trend</td>
+      <td>Hourly recalculation</td>
+    </tr>
+    <tr>
+      <td style="color:var(--yellow);">Depletion Countdown</td>
+      <td>CSV + Monte Carlo model</td>
+      <td>Time-to-zero with confidence band</td>
+      <td>New reading ingested</td>
+    </tr>
+    <tr>
+      <td style="color:var(--red);">Security Audit Log</td>
+      <td>Redaction pipeline output</td>
+      <td>PII caught per layer, total redactions</td>
+      <td>Each report processed</td>
+    </tr>
+    <tr>
+      <td style="color:var(--purple);">Snap Alert Banner</td>
+      <td>CSV anomaly detection</td>
+      <td>Cross-sector correlation + Z-score</td>
+      <td>Real-time anomaly check</td>
+    </tr>
+  </table>
+</div>
+
+<div style="text-align:center;padding:50px 20px;color:var(--dim);font-family:'JetBrains Mono',monospace;font-size:.75rem;">
+  PROJECT SENTINEL · DATA INSIGHTS · EVERY METRIC GROUNDED IN THE ACTUAL DATA<br>
+  <span style="color:var(--purple);">The integration between CSV telemetry and JSON field intel is your competitive edge. Build that bridge.</span>
+</div>
+
+</div>
+</body>
+</html>
