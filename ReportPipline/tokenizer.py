@@ -243,6 +243,7 @@ def clear_token_vault() -> None:
 if __name__ == "__main__":
     data_path = (
         Path(__file__).resolve().parent.parent
+        / "project-edith"
         / "info"
         / "field_intel_reports.json"
     )
