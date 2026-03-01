@@ -12,6 +12,7 @@ from pathlib import Path
 
 import psycopg2
 import psycopg2.extras
+import pika
 
 sys.path.insert(0, str(Path(__file__).parent / "ReportPipline"))
 from llm_extractor import extract, format_for_db
@@ -32,14 +33,19 @@ UPDATE_STATUS = """
     UPDATE reports SET status = 'COMPLETE' WHERE report_id = %s;
 """
 
+db_conn = psycopg2.connect(sys.argv[1] if len(sys.argv) > 1 else DEFAULT_URL)
+rabbitmq_conn = pika.BlockingConnection(pika.ConnectionParameters(host='localhost', port=5672, credentials=pika.PlainCredentials('guest', 'guest')))
+channel = rabbitmq_conn.channel()
+channel.basic_qos(prefetch_count=1)
+channel.queue_declare(queue='reports', durable=True)
 
-def run(db_url: str) -> None:
-    conn = psycopg2.connect(db_url)
+def run() -> None:
+    conn = db_conn
 
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("""
             SELECT r.report_id::text, r.redacted_text
-              FROM reports r
+              FROM reports r 
              WHERE r.status = 'REDACTED'
                AND NOT EXISTS (
                    SELECT 1 FROM intel_extracted ie WHERE ie.report_id = r.report_id
@@ -63,6 +69,7 @@ def run(db_url: str) -> None:
 
         try:
             extraction_result, modifier, raw_llm = extract(text, rid)
+            # 'row' contains the dictionary with your extracted fields
             row = format_for_db(rid, extraction_result, modifier, raw_llm)
 
             if isinstance(row["raw_llm_response"], dict):
@@ -74,12 +81,32 @@ def run(db_url: str) -> None:
             conn.commit()
 
             success += 1
+
+            # --> MOVED INSIDE THE LOOP <--
+            # Publish the specific report data to RabbitMQ
+            channel.basic_publish(
+                exchange='',
+                routing_key='reports', # (Consider changing this, see note below)
+                body=json.dumps({
+                    "report_id": rid,
+                    "sector": row["sector"],
+                    "resource": row["resource"],
+                    "severity": row["severity"],
+                    "event_type": row["event_type"]
+                }),
+                properties=pika.BasicProperties(
+                    delivery_mode=2,  # make message persistent
+                )
+            )
+
         except Exception as e:
             conn.rollback()
             errors.append({"report_id": rid, "error": str(e)})
 
         if (i + 1) % 10 == 0 or (i + 1) == len(rows):
             print(f"  Processed {i + 1}/{len(rows)} ({success} ok, {len(errors)} errors)")
+
+    # (Remove the basic_publish block from outside the loop here)
 
     print("\n" + "=" * 55)
     print(f"Intel rows inserted: {success}")
@@ -92,6 +119,15 @@ def run(db_url: str) -> None:
     conn.close()
 
 
+def channel_callback(ch, method, properties, body):
+    print(f"Received message: {body}")
+    # Acknowledge the message
+    ch.basic_ack(delivery_tag=method.delivery_tag)
+
+    # Work with DB 
+    run()
+
 if __name__ == "__main__":
-    url = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_URL
-    run(url)
+    
+    channel.basic_consume(queue='reports', on_message_callback=channel_callback)
+    channel.start_consuming()
