@@ -430,7 +430,9 @@ onUnmounted(() => {
 .globe-canvas {
   width: 100%;
   height: 100%;
-  max-width: 80lvw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Ensure globe.gl canvas fills container */

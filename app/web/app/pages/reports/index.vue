@@ -16,6 +16,8 @@
           class="report-card"
           :class="{ 'is-new': newIds.has(rep.id), 'is-open': expandedId === rep.id }"
           @click="toggleExpand(rep.id)"
+          @mouseenter="hoveredReportId = rep.id"
+          @mouseleave="hoveredReportId = null"
         >
           <div class="card-body">
             <div class="card-row">
@@ -33,6 +35,17 @@
             class="card-chevron"
             :class="{ 'is-open': expandedId === rep.id }"
           />
+
+          <!-- Mini-graph tooltip on hover -->
+          <Transition name="fade">
+            <div v-if="hoveredReportId === rep.id" class="mini-graph-tooltip">
+              <ReportMiniGraph
+                :report-timestamp="String(rep.timeStarted || rep.timestamp)"
+                :report-id="rep.id"
+                :affected-resources="rep.affectedResources"
+              />
+            </div>
+          </Transition>
         </div>
       </TransitionGroup>
 
@@ -46,12 +59,14 @@
 
 <script setup lang="ts">
 import { useReportsStream } from '@/composables/useReportsStream';
+import ReportMiniGraph from '@/components/ReportMiniGraph.vue'
 import type { StreamReport } from '@/composables/useReportsStream';
 
 definePageMeta({ layout: 'default' });
 
 const listRef = ref<HTMLElement | null>(null);
 const expandedId = ref<string | null>(null);
+const hoveredReportId = ref<string | null>(null);
 const newIds = ref<Set<string>>(new Set());
 
 const { data: initialData } = await useFetch<{ reports: StreamReport[] }>('/api/reports');
@@ -149,6 +164,7 @@ function markNew(id: string) {
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: background 0.2s;
+  position: relative;
 }
 
 .report-card.is-new {
@@ -202,5 +218,25 @@ function markNew(id: string) {
   width: 40px;
   height: 40px;
   margin-bottom: 8px;
+}
+
+.mini-graph-tooltip {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: auto;
+  z-index: 100;
+  margin-top: 4px;
+  pointer-events: none;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

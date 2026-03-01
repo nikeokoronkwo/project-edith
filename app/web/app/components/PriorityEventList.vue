@@ -329,9 +329,10 @@ onUnmounted(() => { sse?.close() })
 /* ── List wrapper ─────────────────────────────────────────────────────────── */
 .event-list-wrap {
   position: relative;
-  max-height: 182px;
+  flex: 1;
   overflow: hidden;
-  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .scroll-fade {
@@ -339,93 +340,97 @@ onUnmounted(() => { sse?.close() })
   bottom: 0;
   left: 0;
   right: 0;
-  height: 40px;
-  background: linear-gradient(to bottom, transparent, var(--card) 88%);
+  height: 32px;
+  background: linear-gradient(to bottom, transparent, var(--card) 85%);
   pointer-events: none;
   z-index: 2;
 }
 
 /* ── Event list ───────────────────────────────────────────────────────────── */
 .event-list {
-  max-height: 182px;
+  flex: 1;
   overflow-y: auto;
-  padding: 6px 8px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-color: var(--primary, #c9a234) transparent;
 }
 
-.event-list::-webkit-scrollbar       { width: 2px; }
+.event-list::-webkit-scrollbar       { width: 3px; }
 .event-list::-webkit-scrollbar-track { background: transparent; }
-.event-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.event-list::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--primary, #c9a234) 40%, transparent); border-radius: 2px; }
+.event-list::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--primary, #c9a234) 60%, transparent); }
 
 /* ── Event card ───────────────────────────────────────────────────────────── */
 .event-card {
   display: flex;
   align-items: flex-start;
-  background: var(--background);
+  background: color-mix(in srgb, var(--card-foreground, white) 2%, transparent);
   border: 1px solid var(--border);
-  border-radius: calc(var(--radius) - 2px);
+  border-left: 4px solid var(--accent);
+  border-radius: calc(var(--radius) - 1px);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   flex-shrink: 0;
 }
 
 .event-card:hover {
-  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
-  background: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 20%, transparent);
+  transform: translateX(2px);
 }
 
 .event-card.is-open {
-  border-color: color-mix(in srgb, var(--accent) 80%, var(--border));
-  background: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
-.event-card.is-new { animation: flash-in 0.4s ease-out; }
+.event-card.is-new { animation: flash-in 0.5s ease-out; }
 
 @keyframes flash-in {
-  0%   { background: color-mix(in srgb, var(--primary) 12%, transparent); }
-  100% { background: var(--background); }
+  0%   { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+  100% { background: color-mix(in srgb, var(--card-foreground, white) 2%, transparent); }
 }
 
 /* Accent bar */
 .accent-bar {
-  width: 3px;
-  flex-shrink: 0;
-  align-self: stretch;
-  background: var(--accent);
-  border-radius: calc(var(--radius) - 2px) 0 0 calc(var(--radius) - 2px);
+  display: none;
 }
 
 /* Card body */
 .card-body {
   flex: 1;
-  padding: 7px 8px;
+  padding: 9px 10px;
   display: flex;
   flex-direction: column;
   gap: 0;
   min-width: 0;
 }
 
-/* ── Card row ─────────────────────────────────────────────────────────────── */
+/* ── Card row ─────────────────────────────────────────────────────────── */
 .card-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
+  row-gap: 4px;
 }
 
 .priority-badge {
   font-size: 6.5px;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.1em;
   font-weight: 700;
-  padding: 2px 5px;
-  border-radius: 2px;
+  padding: 3px 6px;
+  border-radius: 3px;
   white-space: nowrap;
   flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
 }
 
 .new-badge {
@@ -435,6 +440,7 @@ onUnmounted(() => { sse?.close() })
   color: var(--color-status-online);
   flex-shrink: 0;
   animation: pulse-new 1s ease-in-out infinite alternate;
+  grid-column: 2;
 }
 
 @keyframes pulse-new {
@@ -443,16 +449,17 @@ onUnmounted(() => { sse?.close() })
 }
 
 .event-title {
-  flex: 1;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 600;
   color: var(--card-foreground);
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
   min-width: 0;
+  grid-column: 1 / -1;
+  padding-right: 4px;
 }
 
 .event-time {
@@ -460,6 +467,9 @@ onUnmounted(() => { sse?.close() })
   color: var(--muted-foreground);
   flex-shrink: 0;
   letter-spacing: 0.06em;
+  justify-self: end;
+  grid-column: 4;
+  grid-row: 1;
 }
 
 /* ── Expanded section ─────────────────────────────────────────────────────── */
@@ -528,19 +538,19 @@ onUnmounted(() => { sse?.close() })
 
 /* ── Chevron ──────────────────────────────────────────────────────────────── */
 .card-chevron {
-  width: 12px;
-  height: 12px;
-  color: var(--muted-foreground);
+  width: 14px;
+  height: 14px;
+  color: var(--accent);
   flex-shrink: 0;
-  align-self: center;
-  margin-right: 7px;
-  margin-top: 7px;
-  transition: color 0.15s, transform 0.2s;
-  opacity: 0.5;
+  align-self: flex-start;
+  margin-left: auto;
+  margin-top: 8px;
+  transition: color 0.2s, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.7;
 }
 
-.event-card:hover .card-chevron { opacity: 1; }
-.card-chevron.is-open           { transform: rotate(90deg); opacity: 1; }
+.event-card:hover .card-chevron { opacity: 1; color: var(--accent); }
+.card-chevron.is-open           { transform: rotate(90deg); opacity: 1; color: var(--accent); }
 
 /* ── Empty state ──────────────────────────────────────────────────────────── */
 .empty-state {

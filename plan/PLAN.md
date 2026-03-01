@@ -135,7 +135,7 @@ app/
 ### Phase 3: Layout & Core UI
 - [ ] Build layout components (Sidebar, Header, Toast)
 - [ ] Create default layout
-- [ ] Implement Jarvis components
+- [x] Implement Edith components (renamed from Jarvis)
 
 ### Phase 4: Dashboard
 - [ ] Build all dashboard components

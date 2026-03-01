@@ -1,5 +1,5 @@
 <template>
-  <div class="globe-panel">
+  <div class="globe-panel max-w-[50lvw]" ref="panelRef">
     <div class="panel-header">
       <span class="panel-tag">GLOBAL RESOURCE MAP</span>
       <span class="panel-subtitle">LIVE // {{ regions.length }} SECTORS MONITORED</span>
@@ -37,8 +37,24 @@ const emit = defineEmits<{
 
 const regions = computed(() => props.regions || [])
 
+const panelRef = ref<HTMLDivElement>()
 const { height: windowHeight } = useWindowSize()
-const globeHeight = computed(() => Math.max(320, windowHeight.value - 195))
+
+// Calculate dynamic height: full window height - app header(56px) - dashboard padding(48px) - dashboard welcome(56px preset)
+// This gives us the actual available height for the main grid
+const globeHeight = computed(() => {
+  // More robust: use panel height - header height if available
+  if (panelRef.value) {
+    const headerEl = panelRef.value.querySelector('.panel-header')
+    if (headerEl) {
+      const panelHeight = panelRef.value.offsetHeight
+      const headerHeight = headerEl.offsetHeight
+      return Math.max(320, panelHeight - headerHeight)
+    }
+  }
+  // Fallback: original calculation adjusted down to account for GlobeDisplay header (~42px)
+  return Math.max(320, windowHeight.value - 195 - 42)
+})
 
 function handleNavigate(region: GlobeRegion) {
   emit('navigate', region)

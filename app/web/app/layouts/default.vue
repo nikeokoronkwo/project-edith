@@ -7,12 +7,13 @@
         <slot />
       </div>
     </SidebarInset>
-    <JarvisButton />
+    <EdithButton />
   </SidebarProvider>
 </template>
 
 <script setup lang="ts">
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
+import EdithButton from '@/components/EdithButton.vue'
 
 const route = useRoute()
 const sidebarOpen = useCookie<boolean>('sidebar_state')

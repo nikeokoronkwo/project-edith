@@ -17,7 +17,7 @@ Phase 3: Core Layout Components
 | Task | Description |
 |------|-------------|
 | 3.1 | Build AppSidebar.vue - persistent navigation sidebar |
-| 3.2 | Build AppHeader.vue - header with user info, Jarvis toggle |
+| 3.2 | Build AppHeader.vue - header with user info, Edith toggle |
 | 3.3 | Build AppToast.vue - toast notification system with priority colors |
 | 3.4 | Create default.vue layout combining sidebar/header |
 Phase 4: Dashboard Components (Modular)
@@ -50,9 +50,9 @@ Phase 6: Event & Report Components
 Phase 7: AI Assistant
 | Task | Description |
 |------|-------------|
-| 7.1 | Build JarvisButton.vue - floating toggle button |
-| 7.2 | Build JarvisChat.vue - expanded chat interface |
-| 7.3 | Integrate Jarvis into header/layout |
+| 7.1 | Build EdithButton.vue - floating toggle button |
+| 7.2 | Build EdithChat.vue - expanded chat interface |
+| 7.3 | Integrate Edith into header/layout |
 Phase 8: Mock API & Data
 | Task | Description |
 |------|-------------|
