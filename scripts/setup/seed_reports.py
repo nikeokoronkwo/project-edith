@@ -7,7 +7,7 @@ import psycopg2
 from pathlib import Path
 
 DEFAULT_URL = "postgresql://edith_user:edith_password@localhost:5433/edith_db"
-JSON_PATH = Path(__file__).parent / "project-edith" / "info" / "field_intel_reports.json"
+JSON_PATH = Path(__file__).parent.parent.parent / "plan" / "info" / "field_intel_reports.json"
 
 INSERT_SQL = """
     INSERT INTO reports (report_id, timestamp, operative_name, operative_contact, raw_text, priority)

@@ -29,6 +29,6 @@ const pageTitle = computed(() => {
   if (path.startsWith('/analytics')) return 'Analytics'
   if (path.startsWith('/events')) return 'Events'
   if (path.startsWith('/reports')) return 'Reports'
-  return 'Sentinel'
+  return 'Edith'
 })
 </script>

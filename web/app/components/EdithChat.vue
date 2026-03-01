@@ -46,12 +46,10 @@
         </Button>
       </div>
       <div class="edith-results" ref="messagesRef">
-        <!-- error banner -->
-        <div v-if="messages.length && messages[messages.length-1].status === 'error'" class="error-banner">
+        <!-- error banner: only when last message is an error with no visible content already -->
+        <div v-if="lastMessage?.status === 'error' && !lastMessage.content" class="error-banner">
           EDITH encountered an error. Check your connection or try again.
         </div>
-        <!-- loading indicator -->
-        <div v-if="isLoading" class="loading-indicator">Listening to EDITH...</div>
         <!-- when empty, show suggestions list similar to palette screenshot -->
         <template v-if="messages.length === 0">
           <ul class="suggestions">
@@ -225,17 +223,11 @@ button.listening-active {
 
 .error-banner {
   background: rgba(229,62,62,0.15);
-  color: #9b2c2c;
+  color: #fc8181;
   padding: 6px 12px;
   font-size: 0.875rem;
   text-align: center;
-  border-bottom: 1px solid #e53e3e;
-}
-
-.loading-indicator {
-  color: var(--muted-foreground);
-  font-size: 0.875rem;
-  text-align: center;
-  padding: 6px 0;
+  border-radius: 0.375rem;
+  border: 1px solid rgba(229,62,62,0.4);
 }
 </style>

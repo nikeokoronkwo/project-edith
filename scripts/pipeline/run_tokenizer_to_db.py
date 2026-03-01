@@ -16,7 +16,7 @@ from pathlib import Path
 import psycopg2
 import psycopg2.extras
 
-sys.path.insert(0, str(Path(__file__).parent / "ReportPipline"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "backend"))
 from tokenizer import build_known_names, build_known_non_persons, tokenize_pii, clear_token_vault
 
 DEFAULT_URL = "postgresql://edith_user:edith_password@localhost:5433/edith_db"

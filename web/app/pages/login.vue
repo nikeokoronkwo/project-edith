@@ -5,7 +5,7 @@
         <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-secondary mb-4">
           <Icon name="heroicons:shield-check" class="w-10 h-10 text-primary" />
         </div>
-        <h1 class="text-3xl font-bold text-foreground mb-2">SENTINEL</h1>
+        <h1 class="text-3xl font-bold text-foreground mb-2">EDITH</h1>
         <p class="text-muted-foreground text-sm">SHIELD Economic Analysis System</p>
       </div>
 
@@ -51,7 +51,7 @@
             :disabled="loading"
           >
             <Icon v-if="loading" name="svg-spinners:ring-resize" class="w-4 h-4 mr-2" />
-            {{ loading ? 'Authenticating...' : 'Access Sentinel' }}
+            {{ loading ? 'Authenticating...' : 'Access Edith' }}
           </Button>
         </form>
       </div>

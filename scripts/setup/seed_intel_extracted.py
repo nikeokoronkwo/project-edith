@@ -8,7 +8,7 @@ from pathlib import Path
 import psycopg2
 
 DEFAULT_URL = "postgresql://edith_user:edith_password@localhost:5433/edith_db"
-RESULTS_PATH = Path(__file__).parent / "ReportPipline" / "llm_extractor_results.json"
+RESULTS_PATH = Path(__file__).parent.parent.parent / "backend" / "llm_extractor_results.json"
 
 INSERT_SQL = """
     INSERT INTO intel_extracted (

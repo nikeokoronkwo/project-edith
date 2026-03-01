@@ -378,11 +378,9 @@ let ro: ResizeObserver | null = null
 // ── Navigate handler ─────────────────────────────────────────────────────────
 function onNavigate(region: GlobeRegion) {
   emit('navigate', region)
-  // Default: push to analytics sector route
-  // Adjust the path pattern to match your Nuxt router setup
   const path = region.data?.sector
-    ? `/analytics/sector/${encodeURIComponent(region.data.sector)}`
-    : `/analytics/resource/${encodeURIComponent(region.countryCode)}`
+    ? `/analytics/sector/${region.data.sector}`
+    : '/analytics'
   router.push(path).catch(() => {})
 }
 

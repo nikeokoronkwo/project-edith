@@ -61,7 +61,7 @@ export default defineNuxtConfig({
     betterAuthUrl: process.env.BETTER_AUTH_URL || 'http://localhost:3000',
     externalBackendUrl: process.env.EXTERNAL_BACKEND_URL || 'http://localhost:8080',
     public: {
-      appName: 'Sentinel'
+      appName: 'Edith'
     }
   },
 })

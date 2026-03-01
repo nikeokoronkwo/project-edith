@@ -15,7 +15,7 @@
             </div>
             <div class="header-text" v-if="!isCollapsed">
               <span class="org-label">S.H.I.E.L.D.</span>
-              <span class="sys-label">COMMAND // SENTINEL</span>
+              <span class="sys-label">COMMAND // EDITH</span>
             </div>
           </div>
         </SidebarMenuItem>
@@ -51,24 +51,6 @@
         </SidebarGroupContent>
       </SidebarGroup>
 
-      <SidebarGroup class="nav-group">
-        <SidebarGroupLabel v-if="!isCollapsed" class="divider-label">SYSTEM</SidebarGroupLabel>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <NuxtLink to="/events" class="nav-item" :class="{ active: isActive('/events') }">
-                  <span class="nav-icon-wrap">
-                    <Icon name="heroicons:bell-alert" class="nav-icon" />
-                  </span>
-                  <span v-if="!isCollapsed" class="nav-label">EVENTS</span>
-                  <span v-if="isActive('/events')" class="active-bar" />
-                </NuxtLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
     </SidebarContent>
 
     <SidebarFooter class="sidebar-footer">

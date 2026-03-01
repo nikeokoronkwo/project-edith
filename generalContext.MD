@@ -1,4 +1,4 @@
-# Project Sentinel — System Architecture & Task Breakdown
+# Project Edith — System Architecture & Task Breakdown
 
 > **Three core features. Everything else is additive. Ship these first.**
 

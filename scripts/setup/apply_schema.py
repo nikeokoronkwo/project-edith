@@ -6,7 +6,7 @@ import psycopg2
 from pathlib import Path
 
 DEFAULT_URL = "postgresql://edith_user:edith_password@localhost:5433/edith_db"
-SCHEMA_PATH = Path(__file__).parent / "SCHEMA.sql"
+SCHEMA_PATH = Path(__file__).parent.parent.parent / "SCHEMA.sql"
 
 
 def apply_schema(db_url: str) -> None:

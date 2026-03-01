@@ -44,7 +44,7 @@
       class="w-full bg-shield-600 hover:bg-shield-500 disabled:bg-shield-800 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
     >
       <Icon v-if="loading" name="svg-spinners:ring-resize" class="w-5 h-5" />
-      <span>{{ loading ? 'Authenticating...' : 'Access Sentinel' }}</span>
+      <span>{{ loading ? 'Authenticating...' : 'Access Edith' }}</span>
     </button>
 
     <p class="text-center text-gray-500 text-sm">

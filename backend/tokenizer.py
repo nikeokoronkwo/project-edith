@@ -4,7 +4,7 @@ tokenizer.py — PII Tokenization Pipeline (Module 1)
 Three-layer reversible tokenization:
   Layer 1: Regex — phone/callsign patterns
   Layer 2: Dictionary — known operative names (loaded from report metadata)
-  Layer 3: spaCy NER — catches remaining PERSON entities
+  Layer 3: Heuristic NER — capitalized multi-word PERSON patterns
 
 Public API:
     build_known_names(reports) -> set[str]
@@ -19,9 +19,8 @@ import secrets
 from pathlib import Path
 from typing import Optional
 
-import spacy
-
-nlp = spacy.load("en_core_web_sm")
+# Matches "FirstName LastName" (and optionally more words) — all title-cased
+_PERSON_PATTERN = re.compile(r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b')
 
 _token_vault: dict[str, dict] = {}
 
@@ -49,20 +48,20 @@ def build_known_names(reports: list[dict]) -> set[str]:
 
 def build_known_non_persons(reports: list[dict]) -> set[str]:
     """
-    Pre-scan reports with spaCy to find strings tagged as non-PERSON entities
-    (ORG, FAC, GPE, LOC, etc.). These are used as a blocklist so the NER layer
-    doesn't misclassify locations like "Avengers Compound" as person names.
+    Build a blocklist of multi-word title-cased strings that are clearly not
+    person names (e.g. "Avengers Compound", "Stark Industries").  We use a
+    simple heuristic: any title-cased match that appears in the metadata
+    location/facility fields is treated as a non-person.
     """
-    person_texts: set[str] = set()
-    non_person_texts: set[str] = set()
+    non_persons: set[str] = set()
+    location_keys = ("location", "facility", "sector", "region", "site")
     for report in reports:
-        doc = nlp(report.get("raw_text", ""))
-        for ent in doc.ents:
-            if ent.label_ == "PERSON":
-                person_texts.add(ent.text)
-            else:
-                non_person_texts.add(ent.text)
-    return non_person_texts
+        meta = report.get("metadata", {})
+        for key in location_keys:
+            val = meta.get(key)
+            if isinstance(val, str) and re.match(r'^[A-Z]', val):
+                non_persons.add(val)
+    return non_persons
 
 
 def tokenize_pii(
@@ -145,23 +144,18 @@ def tokenize_pii(
         )
         tokenized = tokenized.replace(name, tag)
 
-    # ── Layer 3: spaCy NER — catch unknown PERSON entities ──
-    # Run NER on the ORIGINAL text so spaCy has full context for better accuracy.
-    # Then only apply replacements for entities still present in the tokenized text.
-    doc = nlp(text)
+    # ── Layer 3: Heuristic NER — catch unknown PERSON entities ──
+    # Match title-cased multi-word patterns on the ORIGINAL text for context,
+    # then apply replacements only for matches still present in tokenized text.
     already_replaced = {entry["original_fragment"] for entry in audit_log}
 
-    for ent in doc.ents:
-        if ent.label_ != "PERSON":
-            continue
-        fragment = ent.text
+    for match in _PERSON_PATTERN.finditer(text):
+        fragment = match.group()
         if fragment in already_replaced:
             continue
         if fragment not in tokenized:
             continue
         if fragment in known_non_persons:
-            continue
-        if len(fragment.split()) < 2:
             continue
         token_id = _ensure_unique_token("OPERATIVE")
         tag = f"[{token_id}]"
@@ -180,6 +174,7 @@ def tokenize_pii(
             }
         )
         tokenized = tokenized.replace(fragment, tag)
+        already_replaced.add(fragment)
 
     return tokenized, token_map, audit_log
 
@@ -257,7 +252,7 @@ if __name__ == "__main__":
     known_names = build_known_names(reports)
     print(f"Known operatives: {sorted(known_names)}")
 
-    print("Scanning reports for non-person entities (NER blocklist)...")
+    print("Building non-person blocklist from metadata locations...")
     known_non_persons = build_known_non_persons(reports)
     print(f"Non-person blocklist ({len(known_non_persons)} entries): {sorted(known_non_persons)}\n")
 

@@ -16,7 +16,7 @@ useHead({
   htmlAttrs: {
     class: 'dark'
   },
-  title: 'Sentinel - SHIELD Economic Dashboard',
+  title: 'Edith - SHIELD Economic Dashboard',
   meta: [
     { name: 'description', content: 'SHIELD Economic Analysis and Forecasting Dashboard' }
   ]

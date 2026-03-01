@@ -106,20 +106,24 @@ export function useEdithChat() {
     messages.value.push(assistantMsg)
 
     try {
+      // Build history: messages already in array (includes userMsg), excluding the
+      // in-flight assistantMsg (status: 'streaming'). No need to concat separately.
+      const history = messages.value
+        .filter(m => m.status === 'done' && m.role !== 'tool')
+        .slice(-20)
+        .map(m => ({ role: m.role, content: m.content }))
+
       const response = await fetch('/api/edith', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: messages.value
-            .filter(m => m.status === 'done' && m.role !== 'tool')
-            .slice(-20)
-            .map(m => ({ role: m.role, content: m.content }))
-            .concat([{ role: 'user', content }]),
-        }),
+        body: JSON.stringify({ messages: history }),
       })
 
-      if (!response.ok) throw new Error('Network error')
-      if (!response.body) throw new Error('No body')
+      if (!response.ok) {
+        const errText = await response.text().catch(() => 'Network error')
+        throw new Error(`${response.status}: ${errText}`)
+      }
+      if (!response.body) throw new Error('No response body')
 
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
@@ -135,44 +139,60 @@ export function useEdithChat() {
 
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue
-          const data = line.slice(6)
-          if (data === '[DONE]') continue
+          const raw = line.slice(6)
+          if (raw === '[DONE]') continue
+
+          // AI SDK data stream format: <typeCode>:<jsonValue>
+          const colonIdx = raw.indexOf(':')
+          if (colonIdx === -1) continue
+          const prefix = raw.slice(0, colonIdx)
+          const valueStr = raw.slice(colonIdx + 1)
 
           try {
-            const parsed = JSON.parse(data)
+            const value = JSON.parse(valueStr)
 
-            if (parsed.type === 'text-delta') {
-              assistantMsg.content += parsed.textDelta
-            }
-            if (parsed.type === 'tool-call-streaming-start') {
+            if (prefix === '0') {
+              // text delta — value is a string
+              assistantMsg.content += value
+            } else if (prefix === 'b') {
+              // tool_call_streaming_start — value: { toolCallId, toolName }
               assistantMsg.toolCalls!.push({
-                id: parsed.toolCallId,
-                name: parsed.toolName,
+                id: value.toolCallId,
+                name: value.toolName,
                 status: 'running',
               })
-              if (parsed.toolName === 'requestVisualReport') {
+              if (value.toolName === 'requestVisualReport') {
                 mediaCapturePending.value = true
               }
-            }
-            if (parsed.type === 'tool-result') {
-              const tc = assistantMsg.toolCalls!.find(t => t.id === parsed.toolCallId)
+            } else if (prefix === '9') {
+              // tool_result — value: { toolCallId, result }
+              const tc = assistantMsg.toolCalls!.find(t => t.id === value.toolCallId)
               if (tc) {
                 tc.status = 'done'
-                tc.result = parsed.result
+                tc.result = value.result
               }
-            }
-            if (parsed.type === 'finish') {
+            } else if (prefix === 'd' || prefix === 'e') {
+              // finish_message / step_finish
               assistantMsg.status = 'done'
               isLoading.value = false
               if (assistantMsg.content) speak(assistantMsg.content)
+            } else if (prefix === '3') {
+              // error — value is a string
+              assistantMsg.content = typeof value === 'string' ? value : 'An error occurred'
+              assistantMsg.status = 'error'
+              isLoading.value = false
             }
           } catch (err) {
-            console.warn('Failed to parse stream data:', err, 'raw:', data)
+            console.warn('Failed to parse stream data:', err, 'raw:', raw)
           }
         }
       }
 
-      assistantMsg.status = 'done'
+      // Ensure we don't leave the message in streaming state if stream ended without finish
+      if (assistantMsg.status === 'streaming') {
+        assistantMsg.status = assistantMsg.content ? 'done' : 'error'
+        if (!assistantMsg.content) assistantMsg.content = 'No response received.'
+      }
     } catch (err: any) {
       console.error('EDITH error:', err)
       const msg = err?.message || 'Connection lost. Please try again.'

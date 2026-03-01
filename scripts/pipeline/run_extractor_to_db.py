@@ -14,7 +14,7 @@ import psycopg2
 import psycopg2.extras
 import pika
 
-sys.path.insert(0, str(Path(__file__).parent / "ReportPipline"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "backend"))
 from llm_extractor import extract, format_for_db
 
 DEFAULT_URL = "postgresql://edith_user:edith_password@localhost:5433/edith_db"

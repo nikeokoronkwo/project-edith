@@ -35,7 +35,7 @@
 import GlobeDisplay from '@/components/GlobeDisplay.vue'
 import PriorityEventList from '@/components/PriorityEventList.vue'
 import type { GlobeRegion } from '@/components/globe/types'
-import { lookupIso } from '@/shared/utils/locationMap'
+import { lookupIso, ISO_TO_SECTOR } from '@/shared/utils/locationMap'
 import { useReportsApi } from '@/composables/useExternalApi'
 import { useReportsStream } from '@/composables/useReportsStream'
 
@@ -115,6 +115,7 @@ async function loadRegions() {
           report_count: count,
           severityAvg:  avg,
           resource,
+          sector: ISO_TO_SECTOR[iso],
         },
       })
     }
