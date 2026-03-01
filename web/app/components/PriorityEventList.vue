@@ -7,37 +7,23 @@
         <span class="live-dot" :class="{ streaming: isStreaming }" />
         <span class="live-text" :class="{ streaming: isStreaming }">{{ isStreaming ? 'LIVE' : 'STANDBY' }}</span>
       </div>
-      <span class="event-count">{{ sortedEvents.length }} ACTIVE</span>
+      <span class="event-count">
+        {{ pinnedEvents.length }}<span v-if="sortedEvents.length > pinnedEvents.length"> / {{ sortedEvents.length }}</span> ACTIVE
+      </span>
     </div>
 
-    <!-- Filter bar -->
-    <div class="filter-bar">
-      <button
-        v-for="f in FILTERS"
-        :key="f.key"
-        class="filter-btn"
-        :class="{ active: activeFilter === f.key }"
-        :style="activeFilter === f.key ? { borderColor: f.color, color: f.color } : {}"
-        @click="activeFilter = f.key"
-      >
-        {{ f.label }}
-      </button>
-    </div>
-
-    <!-- Event list -->
+    <!-- Event list — pinned (one per location, top 5 by priority) -->
     <div class="event-list-wrap">
       <div class="event-list" ref="listRef">
         <TransitionGroup name="event-slide">
           <div
-            v-for="ev in filteredEvents"
+            v-for="ev in pinnedEvents"
             :key="ev.id"
             class="event-card"
             :class="[`priority-${ev.priority}`, { 'is-new': newEventIds.has(ev.id), 'is-open': expandedId === ev.id }]"
             :style="{ '--accent': priorityColor(ev.priority) }"
             @click="toggleExpand(ev.id)"
           >
-            <div class="accent-bar" />
-
             <div class="card-body">
               <div class="card-row">
                 <span
@@ -66,14 +52,6 @@
                       class="tag tag-resource"
                     >{{ res.replace(/_/g, ' ') }}</span>
                   </div>
-                  <NuxtLink
-                    :to="`/event/${ev.id}`"
-                    class="view-link"
-                    @click.stop
-                  >
-                    VIEW FULL REPORT
-                    <Icon name="heroicons:arrow-right" class="view-icon" />
-                  </NuxtLink>
                 </div>
               </Transition>
             </div>
@@ -86,9 +64,9 @@
           </div>
         </TransitionGroup>
 
-        <div v-if="filteredEvents.length === 0" class="empty-state">
+        <div v-if="pinnedEvents.length === 0" class="empty-state">
           <Icon name="heroicons:shield-check" class="empty-icon" />
-          <p class="empty-text">NO EVENTS IN THIS CATEGORY</p>
+          <p class="empty-text">NO ACTIVE EVENTS</p>
         </div>
       </div>
 
@@ -97,12 +75,101 @@
 
     <!-- Footer -->
     <div class="panel-footer">
-      <NuxtLink to="/events" class="view-all-link">
+      <button class="view-all-link" @click="showOverlay = true">
         VIEW ALL EVENTS
-        <Icon name="heroicons:arrow-right" class="link-icon" />
-      </NuxtLink>
+        <Icon name="heroicons:table-cells" class="link-icon" />
+      </button>
     </div>
   </div>
+
+  <!-- ── All Events Overlay ──────────────────────────────────────────────── -->
+  <Teleport to="body">
+    <Transition name="overlay-fade">
+      <div v-if="showOverlay" class="events-overlay" @click.self="closeOverlay">
+        <div class="overlay-dialog">
+
+          <!-- Overlay header -->
+          <div class="overlay-header">
+            <div class="overlay-header-left">
+              <span class="overlay-title">ALL EVENTS</span>
+              <span class="overlay-count">{{ overlayFiltered.length }}&nbsp;/&nbsp;{{ sortedEvents.length }} REPORTS</span>
+            </div>
+            <div class="overlay-header-right">
+              <!-- Filter chips -->
+              <div class="overlay-filter-bar">
+                <button
+                  v-for="f in FILTERS"
+                  :key="f.key"
+                  class="filter-btn"
+                  :class="{ active: overlayFilter === f.key }"
+                  :style="overlayFilter === f.key ? { borderColor: f.color, color: f.color } : {}"
+                  @click="overlayFilter = f.key"
+                >{{ f.label }}</button>
+              </div>
+              <button class="overlay-close" @click="closeOverlay" title="Close (Esc)">
+                <Icon name="heroicons:x-mark" class="close-icon" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Table -->
+          <div class="overlay-table-wrap">
+            <table class="overlay-table">
+              <thead>
+                <tr>
+                  <th class="col-priority">PRIORITY</th>
+                  <th class="col-event">EVENT</th>
+                  <th class="col-location">LOCATION</th>
+                  <th class="col-resources">RESOURCES</th>
+                  <th class="col-time">TIME</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="ev in overlayFiltered"
+                  :key="ev.id"
+                  class="table-row"
+                  :class="{ 'row-new': newEventIds.has(ev.id) }"
+                  :style="{ '--row-accent': priorityColor(ev.priority) }"
+                >
+                  <td class="col-priority">
+                    <span
+                      class="priority-badge"
+                      :style="{ background: priorityBadgeBg(ev.priority), color: priorityColor(ev.priority) }"
+                    >{{ priorityLabel(ev.priority) }}</span>
+                  </td>
+                  <td class="col-event">
+                    <span class="row-event-text">{{ ev.event }}</span>
+                    <span v-if="newEventIds.has(ev.id)" class="new-badge">NEW</span>
+                  </td>
+                  <td class="col-location">
+                    <span v-if="ev.locations.length" class="loc-text">
+                      <Icon name="heroicons:map-pin" class="loc-icon" />{{ ev.locations[0] }}<span v-if="ev.locations.length > 1" class="loc-more">+{{ ev.locations.length - 1 }}</span>
+                    </span>
+                    <span v-else class="col-empty">—</span>
+                  </td>
+                  <td class="col-resources">
+                    <div v-if="ev.resources.length" class="res-tags">
+                      <span v-for="r in ev.resources.slice(0, 2)" :key="r" class="tag tag-resource">{{ r.replace(/_/g, ' ') }}</span>
+                      <span v-if="ev.resources.length > 2" class="res-more">+{{ ev.resources.length - 2 }}</span>
+                    </div>
+                    <span v-else class="col-empty">—</span>
+                  </td>
+                  <td class="col-time">{{ timeAgo(ev.started) }}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div v-if="overlayFiltered.length === 0" class="overlay-empty">
+              <Icon name="heroicons:shield-check" class="empty-icon" />
+              <p class="empty-text">NO EVENTS IN THIS CATEGORY</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -147,12 +214,13 @@ const FILTERS = [
 
 const NEW_BADGE_TTL = 8000
 
-const listRef      = ref<HTMLElement | null>(null)
-const activeFilter = ref<string>('all')
-const expandedId   = ref<string | null>(null)
-const events       = ref<PriorityEvent[]>([])
-const newEventIds  = ref<Set<string>>(new Set())
-const isStreaming  = ref(false)
+const listRef       = ref<HTMLElement | null>(null)
+const expandedId    = ref<string | null>(null)
+const events        = ref<PriorityEvent[]>([])
+const newEventIds   = ref<Set<string>>(new Set())
+const isStreaming   = ref(false)
+const showOverlay   = ref(false)
+const overlayFilter = ref<string>('all')
 
 const { data: initialData } = await useFetch('/api/events')
 if (initialData.value?.events) {
@@ -166,9 +234,25 @@ const sortedEvents = computed(() =>
   })
 )
 
-const filteredEvents = computed(() => {
-  if (activeFilter.value === 'all') return sortedEvents.value
-  return sortedEvents.value.filter(e => String(e.priority) === activeFilter.value)
+// Top 5: one per unique primary location, sorted by priority
+const pinnedEvents = computed(() => {
+  const seenLocations = new Set<string>()
+  const result: PriorityEvent[] = []
+  for (const ev of sortedEvents.value) {
+    const loc = ev.locations[0] ?? '__none__'
+    if (!seenLocations.has(loc)) {
+      seenLocations.add(loc)
+      result.push(ev)
+      if (result.length >= 5) break
+    }
+  }
+  return result
+})
+
+// Overlay: all events with filter applied
+const overlayFiltered = computed(() => {
+  if (overlayFilter.value === 'all') return sortedEvents.value
+  return sortedEvents.value.filter(e => String(e.priority) === overlayFilter.value)
 })
 
 function priorityColor(p: number)   { return PRIORITY_COLORS[p] ?? 'var(--foreground)' }
@@ -189,6 +273,10 @@ function toggleExpand(id: string) {
   expandedId.value = expandedId.value === id ? null : id
 }
 
+function closeOverlay() {
+  showOverlay.value = false
+}
+
 function markNew(id: string) {
   newEventIds.value = new Set([...newEventIds.value, id])
   setTimeout(() => {
@@ -198,9 +286,16 @@ function markNew(id: string) {
   }, NEW_BADGE_TTL)
 }
 
+// Close overlay on Escape
+function onKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && showOverlay.value) closeOverlay()
+}
+
 let sse: EventSource | null = null
 
 onMounted(() => {
+  window.addEventListener('keydown', onKeyDown)
+
   sse = new EventSource('/api/streams/events')
   sse.onopen    = () => { isStreaming.value = true }
   sse.onerror   = () => { isStreaming.value = false }
@@ -219,7 +314,10 @@ onMounted(() => {
   }
 })
 
-onUnmounted(() => { sse?.close() })
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeyDown)
+  sse?.close()
+})
 </script>
 
 <style scoped>
@@ -293,39 +391,6 @@ onUnmounted(() => { sse?.close() })
   color: var(--muted-foreground);
 }
 
-/* ── Filter bar ───────────────────────────────────────────────────────────── */
-.filter-bar {
-  display: flex;
-  gap: 4px;
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--muted) 50%, transparent);
-  flex-shrink: 0;
-}
-
-.filter-btn {
-  font-size: 7px;
-  letter-spacing: 0.1em;
-  font-weight: 600;
-  padding: 2px 7px;
-  border-radius: 2px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--muted-foreground);
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
-  white-space: nowrap;
-}
-
-.filter-btn:hover {
-  color: var(--foreground);
-  border-color: color-mix(in srgb, var(--foreground) 30%, transparent);
-}
-
-.filter-btn.active {
-  background: color-mix(in srgb, var(--foreground) 5%, transparent);
-}
-
 /* ── List wrapper ─────────────────────────────────────────────────────────── */
 .event-list-wrap {
   position: relative;
@@ -361,7 +426,6 @@ onUnmounted(() => { sse?.close() })
 .event-list::-webkit-scrollbar       { width: 3px; }
 .event-list::-webkit-scrollbar-track { background: transparent; }
 .event-list::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--primary, #c9a234) 40%, transparent); border-radius: 2px; }
-.event-list::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--primary, #c9a234) 60%, transparent); }
 
 /* ── Event card ───────────────────────────────────────────────────────────── */
 .event-card {
@@ -397,12 +461,6 @@ onUnmounted(() => { sse?.close() })
   100% { background: color-mix(in srgb, var(--card-foreground, white) 2%, transparent); }
 }
 
-/* Accent bar */
-.accent-bar {
-  display: none;
-}
-
-/* Card body */
 .card-body {
   flex: 1;
   padding: 9px 10px;
@@ -412,7 +470,6 @@ onUnmounted(() => { sse?.close() })
   min-width: 0;
 }
 
-/* ── Card row ─────────────────────────────────────────────────────────── */
 .card-row {
   display: grid;
   grid-template-columns: auto auto 1fr auto;
@@ -430,7 +487,7 @@ onUnmounted(() => { sse?.close() })
   border-radius: 3px;
   white-space: nowrap;
   flex-shrink: 0;
-  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
 }
 
 .new-badge {
@@ -472,7 +529,7 @@ onUnmounted(() => { sse?.close() })
   grid-row: 1;
 }
 
-/* ── Expanded section ─────────────────────────────────────────────────────── */
+/* Expanded section */
 .expanded-body {
   display: flex;
   flex-direction: column;
@@ -519,24 +576,6 @@ onUnmounted(() => { sse?.close() })
 
 .tag-icon { width: 7px; height: 7px; }
 
-.view-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 7.5px;
-  letter-spacing: 0.12em;
-  font-weight: 700;
-  color: var(--primary);
-  text-decoration: none;
-  opacity: 0.85;
-  transition: opacity 0.15s;
-  align-self: flex-start;
-}
-
-.view-link:hover { opacity: 1; }
-.view-icon       { width: 10px; height: 10px; }
-
-/* ── Chevron ──────────────────────────────────────────────────────────────── */
 .card-chevron {
   width: 14px;
   height: 14px;
@@ -549,10 +588,10 @@ onUnmounted(() => { sse?.close() })
   opacity: 0.7;
 }
 
-.event-card:hover .card-chevron { opacity: 1; color: var(--accent); }
-.card-chevron.is-open           { transform: rotate(90deg); opacity: 1; color: var(--accent); }
+.event-card:hover .card-chevron { opacity: 1; }
+.card-chevron.is-open           { transform: rotate(90deg); opacity: 1; }
 
-/* ── Empty state ──────────────────────────────────────────────────────────── */
+/* Empty state */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -579,11 +618,16 @@ onUnmounted(() => { sse?.close() })
   align-items: center;
   justify-content: center;
   gap: 5px;
+  width: 100%;
   font-size: 8px;
   letter-spacing: 0.14em;
   font-weight: 700;
   color: var(--muted-foreground);
-  text-decoration: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
   transition: color 0.15s;
 }
 
@@ -591,7 +635,7 @@ onUnmounted(() => { sse?.close() })
 .link-icon                      { width: 11px; height: 11px; transition: transform 0.15s; }
 .view-all-link:hover .link-icon { transform: translateX(3px); }
 
-/* ── Transitions ──────────────────────────────────────────────────────────── */
+/* ── Transitions (card list) ──────────────────────────────────────────────── */
 .event-slide-enter-active { transition: all 0.25s ease-out; }
 .event-slide-enter-from   { opacity: 0; transform: translateY(-6px); }
 
@@ -602,5 +646,268 @@ onUnmounted(() => { sse?.close() })
 .expand-enter-from, .expand-leave-to {
   opacity: 0;
   transform: translateY(-4px);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   OVERLAY
+   ════════════════════════════════════════════════════════════════════════════ */
+.events-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 14, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.overlay-dialog {
+  width: 100%;
+  max-width: 1000px;
+  max-height: calc(100vh - 64px);
+  background: rgba(13, 17, 23, 0.98);
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
+  border-radius: 6px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7), 0 0 0 1px color-mix(in srgb, var(--primary) 10%, transparent);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Overlay header */
+.overlay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
+.overlay-header-left {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.overlay-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--primary);
+}
+
+.overlay-count {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  color: var(--muted-foreground);
+}
+
+.overlay-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.overlay-filter-bar {
+  display: flex;
+  gap: 4px;
+}
+
+.filter-btn {
+  font-size: 7px;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+
+.filter-btn:hover {
+  color: var(--foreground);
+  border-color: color-mix(in srgb, var(--foreground) 30%, transparent);
+}
+
+.filter-btn.active {
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+
+.overlay-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.overlay-close:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.close-icon { width: 14px; height: 14px; }
+
+/* Overlay table wrapper */
+.overlay-table-wrap {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--primary) 35%, transparent) transparent;
+}
+
+.overlay-table-wrap::-webkit-scrollbar       { width: 4px; }
+.overlay-table-wrap::-webkit-scrollbar-track { background: transparent; }
+.overlay-table-wrap::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--primary) 35%, transparent); border-radius: 2px; }
+
+.overlay-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 8.5px;
+  letter-spacing: 0.04em;
+}
+
+.overlay-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(13, 17, 23, 0.98);
+}
+
+.overlay-table th {
+  text-align: left;
+  padding: 8px 14px;
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.overlay-table th:first-child { padding-left: 16px; }
+.overlay-table th:last-child  { padding-right: 16px; }
+
+/* Column widths */
+.col-priority  { width: 90px; }
+.col-event     { min-width: 200px; }
+.col-location  { width: 160px; }
+.col-resources { width: 180px; }
+.col-time      { width: 60px; text-align: right; }
+
+.table-row {
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  cursor: default;
+  transition: background 0.12s;
+}
+
+.table-row:hover {
+  background: color-mix(in srgb, var(--row-accent) 8%, transparent);
+}
+
+.table-row td {
+  padding: 9px 14px;
+  vertical-align: middle;
+  color: var(--card-foreground);
+}
+
+.table-row td:first-child { padding-left: 16px; }
+.table-row td:last-child  { padding-right: 16px; text-align: right; color: var(--muted-foreground); }
+
+.row-event-text {
+  font-weight: 500;
+  font-size: 9px;
+}
+
+.table-row .new-badge {
+  font-size: 6px;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  color: var(--color-status-online);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.loc-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted-foreground);
+}
+
+.loc-icon { width: 9px; height: 9px; color: var(--primary); flex-shrink: 0; }
+
+.loc-more {
+  font-size: 7px;
+  color: var(--muted-foreground);
+  opacity: 0.7;
+}
+
+.res-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+}
+
+.res-more {
+  font-size: 7px;
+  color: var(--muted-foreground);
+  opacity: 0.7;
+}
+
+.col-empty {
+  color: var(--muted-foreground);
+  opacity: 0.4;
+}
+
+.overlay-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 16px;
+  color: var(--muted-foreground);
+  opacity: 0.5;
+}
+
+/* ── Overlay transition ───────────────────────────────────────────────────── */
+.overlay-fade-enter-active,
+.overlay-fade-leave-active {
+  transition: opacity 0.18s ease;
+}
+.overlay-fade-enter-active .overlay-dialog,
+.overlay-fade-leave-active .overlay-dialog {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.overlay-fade-enter-from,
+.overlay-fade-leave-to { opacity: 0; }
+
+.overlay-fade-enter-from .overlay-dialog,
+.overlay-fade-leave-to  .overlay-dialog {
+  opacity: 0;
+  transform: scale(0.97) translateY(8px);
 }
 </style>
