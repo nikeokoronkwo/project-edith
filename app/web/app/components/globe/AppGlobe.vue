@@ -333,6 +333,14 @@ watch(
   { deep: true },
 )
 
+// ── Update globe.gl canvas height when the prop changes ────────────────────────
+watch(
+  () => props.height,
+  (newH) => {
+    if (globeInstance && newH) globeInstance.height(newH)
+  },
+)
+
 // ── Resize observer ───────────────────────────────────────────────────────────
 let ro: ResizeObserver | null = null
 

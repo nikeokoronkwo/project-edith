@@ -9,28 +9,20 @@
       <AppGlobe
         :regions="regions"
         :auto-rotate-speed="0.12"
-        :height="460"
+        :height="globeHeight"
         :enable-zoom="true"
         @navigate="handleNavigate"
         @region-hover="handleRegionHover"
-      >
-        <!-- Custom popup slot example (optional) -->
-        <!-- <template #popup="{ region, navigate }">
-          Your custom popup component here
-          <div class="custom-popup">
-            <h3>{{ region.name }}</h3>
-            <button @click="navigate(region)">View</button>
-          </div>
-        </template> -->
-      </AppGlobe>
+      />
       <template #fallback>
-        <div class="globe-skeleton" style="height: 460px" />
+        <div class="globe-skeleton" :style="{ height: globeHeight + 'px' }" />
       </template>
     </ClientOnly>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useWindowSize } from '@vueuse/core'
 import AppGlobe from './globe/AppGlobe.vue'
 import type { GlobeRegion } from './globe/types'
 
@@ -45,6 +37,11 @@ const emit = defineEmits<{
 }>()
 
 const regions = computed(() => props.regions || [])
+
+// Match the main-grid height from dashboard layout:
+//   100vh - 104px (header + padding) - 56px (welcome + gap) - 35px (panel header) = 100vh - 195px
+const { height: windowHeight } = useWindowSize()
+const globeHeight = computed(() => Math.max(320, windowHeight.value - 195))
 
 function handleNavigate(region: GlobeRegion) {
   emit('navigate', region)

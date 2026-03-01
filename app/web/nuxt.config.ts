@@ -15,6 +15,16 @@ export default defineNuxtConfig({
     'shadcn-nuxt',
   ],
 
+  fonts: {
+    families: [
+      { name: 'JetBrains Mono', provider: 'google', weights: [400, 500, 600, 700] },
+    ],
+    defaults: {
+      weights: [400, 700],
+      styles: ['normal'],
+    },
+  },
+
   nitro: {
     experimental: {
       tasks: true
