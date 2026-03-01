@@ -9,6 +9,7 @@ Public API:
     insert_report(conn, row)
     insert_intel_extracted(conn, row)
     insert_redaction_audit(conn, rows)
+    insert_telemetry_reading(conn, row)
 """
 
 import json
@@ -85,3 +86,26 @@ def insert_redaction_audit(conn, rows: list[dict]) -> None:
     """
     with conn.cursor() as cur:
         cur.executemany(sql, rows)
+
+
+def insert_telemetry_reading(conn, row: dict) -> int:
+    """
+    INSERT a single telemetry reading and return its id.
+
+    Expected keys: timestamp, sector_id, resource_type,
+                   stock_level, usage_rate_hourly, snap_event_detected (optional).
+    """
+    sql = """
+        INSERT INTO telemetry_readings (
+            timestamp, sector_id, resource_type,
+            stock_level, usage_rate_hourly, snap_event_detected
+        ) VALUES (
+            %(timestamp)s, %(sector_id)s, %(resource_type)s,
+            %(stock_level)s, %(usage_rate_hourly)s, %(snap_event_detected)s
+        )
+        RETURNING id;
+    """
+    params = {**row, "snap_event_detected": row.get("snap_event_detected", False)}
+    with conn.cursor() as cur:
+        cur.execute(sql, params)
+        return cur.fetchone()[0]

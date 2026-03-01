@@ -2,3 +2,5 @@
 __pycache__/
 *.pyc
 ReportPipline/tokenizer_results.json
+
+venv
