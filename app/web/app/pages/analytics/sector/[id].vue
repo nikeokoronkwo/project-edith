@@ -61,11 +61,13 @@
 import type { AnalyticsSeries } from '~/utils/analyticsTypes'
 
 const route    = useRoute()
-const sectorId = computed(() => (route.params.id as string).toUpperCase())
+const sectorId = computed(() => decodeURIComponent(route.params.id as string))
 
-const { connected, hydrated, sectors, seriesForSector } = useAnalyticsStream()
+const { connected, hydrated, sectors, seriesForSector, hydrate } = useAnalyticsStream()
 
 const seriesList = seriesForSector(sectorId)
+
+onMounted(hydrate)
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function formatSector(s: string)   { return s.replace(/_/g, ' ') }

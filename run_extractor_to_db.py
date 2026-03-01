@@ -37,7 +37,9 @@ db_conn = psycopg2.connect(sys.argv[1] if len(sys.argv) > 1 else DEFAULT_URL)
 rabbitmq_conn = pika.BlockingConnection(pika.ConnectionParameters(host='localhost', port=5672, credentials=pika.PlainCredentials('guest', 'guest')))
 channel = rabbitmq_conn.channel()
 channel.basic_qos(prefetch_count=1)
-channel.queue_declare(queue='reports', durable=True)
+channel.exchange_declare(exchange='shield_events', exchange_type='fanout', durable=True)
+channel.queue_declare(queue='reports_stream', durable=True)
+channel.queue_bind(queue='reports_stream', exchange='shield_events')
 
 def run() -> None:
     conn = db_conn
@@ -85,8 +87,8 @@ def run() -> None:
             # --> MOVED INSIDE THE LOOP <--
             # Publish the specific report data to RabbitMQ
             channel.basic_publish(
-                exchange='',
-                routing_key='reports', # (Consider changing this, see note below)
+                exchange='shield_events',
+                routing_key='',
                 body=json.dumps({
                     "report_id": rid,
                     "sector": row["sector"],

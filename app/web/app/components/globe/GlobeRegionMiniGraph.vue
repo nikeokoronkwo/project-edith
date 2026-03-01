@@ -59,22 +59,40 @@ const props = defineProps<{
   label: string
 }>()
 
+const { allSeries } = useAnalyticsStream()
+
 const svgRef = ref<SVGSVGElement | null>(null)
-const width = 196
+const width  = 196
 const height = 60
 
-// Generate mock data if not provided
-const data = computed(() => {
-  return props.region.data?.timeseries || generateMockData()
+// Find the analytics series for this region's resource/sector
+const matchedSeries = computed(() => {
+  const resource = props.region.data?.resource
+  const sector   = props.region.data?.sector
+  if (!resource) return null
+  if (sector) {
+    const s = allSeries.value.find(sr => sr.id === `${resource}::${sector}`)
+    if (s?.data.length) return s
+  }
+  // No sector — pick any series for this resource
+  return allSeries.value.find(sr => sr.id.startsWith(resource + '::') && sr.data.length) ?? null
 })
 
-function generateMockData(): number[] {
-  const base = 50 + Math.random() * 30
-  return Array.from({ length: 12 }, (_, i) => {
-    const trend = props.region.severity === 'critical' ? -3 : props.region.severity === 'warning' ? -1 : 0
-    return Math.max(10, Math.min(100, base + trend * i + (Math.random() - 0.5) * 15))
-  })
-}
+const data = computed((): number[] => {
+  // 1. Use real analytics timeseries if available
+  const s = matchedSeries.value
+  if (s?.data.length) {
+    const vals = s.data.slice(-20).map(d => d.value)
+    const min  = Math.min(...vals)
+    const max  = Math.max(...vals)
+    if (max !== min) return vals.map(v => ((v - min) / (max - min)) * 100)
+    return vals.map(() => 50)
+  }
+  // 2. Fall back to pre-populated timeseries from region data
+  if (props.region.data?.timeseries?.length) return props.region.data.timeseries
+  // 3. Flat fallback
+  return [50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50]
+})
 
 const points = computed(() => {
   const d = data.value

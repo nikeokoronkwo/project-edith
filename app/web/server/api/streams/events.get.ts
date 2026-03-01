@@ -34,9 +34,11 @@ export default defineEventHandler(async (event: H3Event) => {
       if (msg) {
         const parsed = parseMessage<Omit<StreamEvent, 'timestamp'>>(msg);
         if (parsed) {
+          const content = parsed.content as StreamEvent;
           const eventData: StreamEvent = {
-            ...parsed.content,
-            timestamp: parsed.timestamp
+            ...content,
+            timestamp: content.timestamp
+              ?? (content.started ? new Date(content.started).getTime() : parsed.timestamp),
           };
           stream.write(`data: ${JSON.stringify(eventData)}\n\n`);
         }

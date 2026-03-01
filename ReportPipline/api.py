@@ -19,13 +19,19 @@ Run with:
 
 import base64
 import json
+import logging
+import os
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Optional
 
+import pika
 from fastapi import FastAPI, HTTPException, Query, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+log = logging.getLogger(__name__)
 
 from db import (
     get_connection,
@@ -43,8 +49,21 @@ from db import (
 )
 from llm_extractor import VALID_SECTORS
 from pipeline import process_report
+from publisher import start_publisher
 
-app = FastAPI(title="Avengers Intel API", version="2.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    stop, threads = start_publisher()
+    log.info("[lifespan] Background publisher started (%d threads)", len(threads))
+    yield
+    stop.set()
+    for t in threads:
+        t.join(timeout=5)
+    log.info("[lifespan] Background publisher stopped")
+
+
+app = FastAPI(title="Avengers Intel API", version="2.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -54,6 +73,27 @@ app.add_middleware(
 )
 
 router = APIRouter(prefix="/api")
+
+RABBITMQ_EXCHANGE = "shield_events"
+
+
+def _publish_to_rabbitmq(message: dict) -> None:
+    """Publish a JSON message to the shield_events fanout exchange (fire-and-forget)."""
+    rabbitmq_url = os.environ.get("RABBITMQ_URL", "amqp://guest:guest@localhost:5672")
+    try:
+        params = pika.URLParameters(rabbitmq_url)
+        connection = pika.BlockingConnection(params)
+        channel = connection.channel()
+        channel.exchange_declare(exchange=RABBITMQ_EXCHANGE, exchange_type="fanout", durable=True)
+        channel.basic_publish(
+            exchange=RABBITMQ_EXCHANGE,
+            routing_key="",
+            body=json.dumps(message),
+            properties=pika.BasicProperties(expiration="300000"),
+        )
+        connection.close()
+    except Exception as exc:
+        log.warning("RabbitMQ publish failed (non-fatal): %s", exc)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -184,6 +224,27 @@ def submit_report(body: FrontendReportRequest):
         conn.close()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
+
+    ext = result.get("extraction_result", {})
+    mod = result.get("modifier", {})
+
+    _publish_to_rabbitmq({
+        "id": report_id,
+        "heroAlias": hero_alias,
+        "description": description,
+        "timeStarted": timestamp,
+        "affectedLocations": [ext.get("sector", sector)],
+        "severity": _severity_to_label(ext.get("severity")),
+    })
+
+    _publish_to_rabbitmq({
+        "id": str(uuid.uuid4()),
+        "event": ext.get("summary", description),
+        "priority": 2,
+        "started": timestamp,
+        "timestamp": int(datetime.fromisoformat(timestamp).timestamp() * 1000)
+        if timestamp else int(datetime.now(timezone.utc).timestamp() * 1000),
+    })
 
     return {
         "success": True,

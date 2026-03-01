@@ -1,49 +1,28 @@
-import { z } from 'zod';
+export default defineEventHandler(async () => {
+  const config = useRuntimeConfig()
+  const backendUrl = config.externalBackendUrl
 
-export type SeverityLevel = 'critical' | 'warning' | 'elevated' | 'normal';
+  try {
+    const data = await $fetch<{ reports: any[]; total: number }>(
+      `${backendUrl}/api/reports?limit=200&offset=0`
+    )
 
-export interface ReportSummary {
-  id: string;
-  heroAlias: string;
-  description: string;
-  timeStarted: string;
-  timestamp?: number;
-  affectedLocations: string[];        // textual locations reported by hero
-  severity: SeverityLevel;           // mock severity for coloring
-}
-
-// simple mock list; in an actual app this would hit the external backend or database
-const MOCK_REPORTS: ReportSummary[] = [
-  {
-    id: 'rpt-001',
-    heroAlias: 'Night Shift',
-    description: 'Sightings of multiple unidentified drones around Stark Industries. Recon recommended.',
-    timeStarted: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    affectedLocations: ['Avengers Compound'],
-    severity: 'warning',
-  },
-  {
-    id: 'rpt-002',
-    heroAlias: 'Silver Sentinel',
-    description: 'Arc reactor leak reported in lower Manhattan; containment teams en route.',
-    timeStarted: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
-    affectedLocations: ['Avengers Compound'],
-    severity: 'elevated',
-  },
-  {
-    id: 'rpt-003',
-    heroAlias: 'Ghostwalker',
-    description: 'Unauthorized Wakandan tech shipment intercepted near Rotterdam port.',
-    timeStarted: new Date(Date.now() - 1000 * 60 * 220).toISOString(),
-    affectedLocations: ['Wakanda'],
-    severity: 'normal',
+    return {
+      reports: data.reports.map((r: any) => ({
+        id: r.reportId || r.report_id || r.metadata,
+        heroAlias: r.heroAlias || 'Unknown',
+        description: r.description || '',
+        timeStarted: r.timeStarted || '',
+        timestamp: r.timeStarted ? new Date(r.timeStarted).getTime() : Date.now(),
+        affectedLocations: r.affectedLocations || [],
+        affectedResources: r.affectedResources || [],
+        severity: r.severity || 'normal',
+      })),
+      total: data.total,
+      generated_at: new Date().toISOString(),
+    }
+  } catch (err) {
+    console.error('[GET /api/reports] Backend fetch failed:', err)
+    return { reports: [], total: 0, generated_at: new Date().toISOString() }
   }
-];
-
-export default defineEventHandler(() => {
-  return {
-    reports: MOCK_REPORTS,
-    total: MOCK_REPORTS.length,
-    generated_at: new Date().toISOString()
-  };
-});
+})

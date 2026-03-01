@@ -6,7 +6,7 @@
     <div class="main-grid">
       <!-- Left: Globe (2/3) -->
       <div class="globe-col">
-        <GlobeDisplay :regions="mockRegions" />
+        <GlobeDisplay :regions="regions" />
       </div>
 
       <!-- Right: stacked panels (1/3) -->
@@ -18,7 +18,7 @@
         <div class="hero-panel">
           <div class="hero-header">
             <span class="hero-label">ANONYMOUS HERO REPORTS</span>
-            <span class="hero-count">12 PENDING</span>
+            <span class="hero-count">{{ reportTotal }} REPORTS</span>
           </div>
           <div class="hero-body">
             <div class="text-muted-foreground text-[8.5px] tracking-widest text-center mt-6 opacity-50">
@@ -50,42 +50,76 @@ const rankToSeverity = (avg: number): GlobeRegion['severity'] => {
   return 'normal'
 }
 
-// holds the region data for the globe
-const mockRegions: GlobeRegion[] = []
+const reportTotal = ref(0)
+
+// Reactive so GlobeDisplay re-renders when data arrives
+const regions = ref<GlobeRegion[]>([])
+
+// Kick off analytics hydration in parallel (needed for GlobeRegionMiniGraph)
+const { hydrate: hydrateAnalytics } = useAnalyticsStream()
 
 // fetch reports and aggregate severity by iso code
 async function loadRegions() {
   try {
     const reportsApi = useReportsApi()
-    const resp = await reportsApi.getReports(100, 0)
-    const severityMap: Record<string, { total: number; count: number }> = {}
+    const [resp] = await Promise.all([
+      reportsApi.getReports(200, 0),
+      hydrateAnalytics(),
+    ])
+    reportTotal.value = resp.total ?? resp.reports.length
+
+    const severityMap:  Record<string, { total: number; count: number }> = {}
+    const resourceMap:  Record<string, Record<string, number>> = {}
 
     resp.reports.forEach((r: any) => {
-      (r.affectedLocations || []).forEach((loc: string) => {
-        const iso = lookupIso(loc) || loc.toUpperCase().slice(0,3)
-        const sev = r.severity || 'normal'
-        const rank = severityRank[sev] || 1
+      const sev  = r.severity || 'normal'
+      const rank = severityRank[sev] || 1
+
+      ;(r.affectedLocations || []).forEach((loc: string) => {
+        const iso = lookupIso(loc) || (loc.length === 3 ? loc.toUpperCase() : undefined)
+        if (!iso) return
         if (!severityMap[iso]) severityMap[iso] = { total: 0, count: 0 }
         severityMap[iso].total += rank
         severityMap[iso].count += 1
+
+        // Track which resource appears most often per region
+        ;(r.affectedResources || []).forEach((res: string) => {
+          if (!resourceMap[iso]) resourceMap[iso] = {}
+          resourceMap[iso][res] = (resourceMap[iso][res] || 0) + 1
+        })
       })
     })
 
-    mockRegions.length = 0
     const nameLookup = new Intl.DisplayNames(['en'], { type: 'region' })
+    const newRegions: GlobeRegion[] = []
+
     for (const [iso, { total, count }] of Object.entries(severityMap)) {
       const avg = total / count
-      mockRegions.push({
+
+      // Dominant resource for this region (used by GlobeRegionMiniGraph)
+      const resCounts = resourceMap[iso]
+      const resource  = resCounts
+        ? Object.entries(resCounts).sort(([, a], [, b]) => b - a)[0]?.[0]
+        : undefined
+
+      // Attempt Intl name lookup — ISO_A3 needs alpha-2; skip gracefully if it fails
+      let name = iso
+      try { name = nameLookup.of(iso) || iso } catch { /* ignore */ }
+
+      newRegions.push({
         id: iso,
-        name: nameLookup.of(iso) || iso,
+        name,
         countryCode: iso,
         severity: rankToSeverity(avg),
         data: {
           report_count: count,
-          severityAvg: avg
-        }
+          severityAvg:  avg,
+          resource,
+        },
       })
     }
+
+    regions.value = newRegions
   } catch (e) {
     console.error('Failed to load report regions', e)
   }

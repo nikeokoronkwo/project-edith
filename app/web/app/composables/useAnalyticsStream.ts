@@ -31,9 +31,11 @@ export function useAnalyticsStream() {
 
   // ── REST hydration ──────────────────────────────────────────────────────────
   // Safe to call multiple times — the guard prevents duplicate fetches.
+  // Always attempts to open the SSE connection on the client after data is ready.
   async function hydrate() {
+    if (import.meta.client) connect()   // ensure SSE is up whenever hydrate is called
     if (hydrated.value) return
-    hydrated.value = true           // set early to prevent concurrent calls
+    hydrated.value = true               // set early to prevent concurrent calls
     try {
       const data = await $fetch<{
         series:    AnalyticsSeries[]
@@ -45,7 +47,7 @@ export function useAnalyticsStream() {
       sectors.value   = data.sectors
     } catch (err) {
       console.error('[Analytics] Hydration failed:', err)
-      hydrated.value = false          // allow retry on next call
+      hydrated.value = false            // allow retry on next call
     }
   }
 
@@ -77,15 +79,46 @@ export function useAnalyticsStream() {
         // Ignore messages that don't carry the analytics shape
         if (!msg.resource || !msg.sector || msg.value === undefined) return
 
-        const sid    = `${msg.resource}::${msg.sector}`
-        const series = allSeries.value.find(s => s.id === sid)
-        if (!series) return
+        const sid = `${msg.resource}::${msg.sector}`
+        const idx = allSeries.value.findIndex(s => s.id === sid)
 
-        series.data.push({ timestamp: msg.timestamp, value: msg.value })
+        const newPoint = { timestamp: msg.timestamp, value: msg.value }
+        const MAX_POINTS = 2000
 
-        // Merge in any updated forecast metadata
-        if (msg.forecast) {
-          series.forecast = { ...series.forecast, ...msg.forecast }
+        if (idx === -1) {
+          // Unknown series — create it so it appears on the chart immediately
+          const COLORS = [
+            '#00d4ff','#0080e6','#ef4444','#f97316','#eab308',
+            '#10b981','#a855f7','#ec4899','#14b8a6','#f43f5e',
+          ]
+          const newSeries: AnalyticsSeries = {
+            id:       sid,
+            label:    `${msg.resource} / ${msg.sector}`,
+            color:    COLORS[allSeries.value.length % COLORS.length],
+            unit:     '',
+            data:     [newPoint],
+            forecast: msg.forecast,
+          }
+          allSeries.value = [...allSeries.value, newSeries]
+          if (!resources.value.includes(msg.resource))
+            resources.value = [...resources.value, msg.resource]
+          if (!sectors.value.includes(msg.sector))
+            sectors.value = [...sectors.value, msg.sector]
+        } else {
+          // Replace the series object so all computed filters re-evaluate
+          const s       = allSeries.value[idx]
+          const rawData = [...s.data, newPoint]
+          const trimmed = rawData.length > MAX_POINTS
+            ? rawData.slice(rawData.length - MAX_POINTS)
+            : rawData
+          const updated: AnalyticsSeries = {
+            ...s,
+            data:     trimmed,
+            forecast: msg.forecast ? { ...s.forecast, ...msg.forecast } : s.forecast,
+          }
+          const next = allSeries.value.slice()
+          next[idx]  = updated
+          allSeries.value = next
         }
       } catch {}
     })

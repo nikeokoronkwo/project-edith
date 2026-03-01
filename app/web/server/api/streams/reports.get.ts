@@ -11,8 +11,10 @@ export interface StreamReport {
   id: string;
   heroAlias?: string;
   description?: string;
+  timeStarted?: string;
   timestamp: number;
   affectedLocations?: string[];
+  affectedResources?: string[];
   severity?: 'critical' | 'warning' | 'elevated' | 'normal';
 }
 
@@ -35,9 +37,11 @@ export default defineEventHandler(async (event: H3Event) => {
       if (msg) {
         const parsed = parseMessage<Omit<StreamReport, 'timestamp'>>(msg);
         if (parsed) {
+          const content = parsed.content as StreamReport;
           const reportData: StreamReport = {
-            ...parsed.content,
-            timestamp: parsed.timestamp
+            ...content,
+            timestamp: content.timestamp
+              ?? (content.timeStarted ? new Date(content.timeStarted).getTime() : parsed.timestamp),
           };
           stream.write(`data: ${JSON.stringify(reportData)}\n\n`);
         }

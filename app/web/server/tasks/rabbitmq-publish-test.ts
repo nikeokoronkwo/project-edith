@@ -38,8 +38,8 @@ export default defineTask({
       }
 
       const analytics = [];
-      const resources = ['steel', 'energy', 'food', 'medical', 'electronics'];
-      const sectors = ['construction', 'transportation', 'manufacturing', 'healthcare', 'defense'];
+      const resources = ['Vibranium (kg)', 'Arc Reactor Cores', 'Medical Kits', 'Clean Water (L)', 'Pym Particles'];
+      const sectors = ['Wakanda', 'Avengers Compound', 'Sokovia', 'New Asgard', 'Sanctum Sanctorum'];
 
       for (let i = 0; i < analyticsCount; i++) {
         const data = {

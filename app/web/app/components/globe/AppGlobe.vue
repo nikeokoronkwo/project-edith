@@ -354,7 +354,9 @@ watch(
   () => props.regions,
   () => {
     if (!globeInstance) return
+    // Re-setting polygonsData forces globe.gl to re-evaluate all accessor functions
     globeInstance
+      .polygonsData(countries)
       .polygonCapColor(polyFill)
       .polygonStrokeColor(polyStroke)
       .polygonAltitude(polyAltitude)

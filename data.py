@@ -69,10 +69,10 @@ async def rabbitmq_listener():
     await channel.set_qos(prefetch_count=1)
 
     exchange = await channel.declare_exchange(
-        "reports.direct", aio_pika.ExchangeType.DIRECT, durable=True
+        "shield_events", aio_pika.ExchangeType.FANOUT, durable=True
     )
-    queue = await channel.declare_queue("report.events", durable=True)
-    await queue.bind(exchange, routing_key="report.new")
+    queue = await channel.declare_queue("events_stream", durable=True)
+    await queue.bind(exchange)
 
     async with queue.iterator() as queue_iter:
         async for message in queue_iter:

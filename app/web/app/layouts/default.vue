@@ -8,15 +8,20 @@
       </div>
     </SidebarInset>
     <EdithButton />
+    <Sonner position="top-right" />
   </SidebarProvider>
 </template>
 
 <script setup lang="ts">
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
 import EdithButton from '@/components/EdithButton.vue'
+import Sonner from '@/components/ui/sonner/Sonner.vue'
 
 const route = useRoute()
 const sidebarOpen = useCookie<boolean>('sidebar_state')
+
+// Fire global toasts for high-priority events from the SSE events stream
+useEventAlerts()
 
 const pageTitle = computed(() => {
   const path = route.path

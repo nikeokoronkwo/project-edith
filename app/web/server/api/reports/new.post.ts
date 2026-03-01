@@ -121,7 +121,9 @@ export default defineEventHandler(async (event: H3Event) => {
         heroAlias,
         description,
         timeStarted: timeStarted || timestamp,
+        timestamp: timeStarted ? new Date(timeStarted).getTime() : Date.now(),
         affectedLocations,
+        affectedResources,
         severity: 'normal' as const // default, backend could compute
       };
       ch.publish(RABBITMQ_EXCHANGE, '', Buffer.from(JSON.stringify(msg)));
@@ -139,11 +141,9 @@ export default defineEventHandler(async (event: H3Event) => {
   } catch (error) {
     console.error('[reports/new] External backend error:', error);
     
-    return {
-      success: true,
-      reportId,
-      timestamp,
-      message: 'Report submitted (mock - external backend unavailable)'
-    };
+    throw createError({
+      statusCode: 502,
+      message: 'Report processing failed — backend unavailable'
+    });
   }
 });

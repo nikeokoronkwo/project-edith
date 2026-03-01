@@ -83,11 +83,11 @@ export function useEventsStream(options: UseEventsStreamOptions = {}) {
 }
 
 export function useLazyEventsStream(maxEvents = 50) {
-  const { data: initialEvents, pending } = useFetch<StreamEvent[]>('/api/events', {
-    default: () => []
+  const { data: initialData, pending } = useFetch<{ events: StreamEvent[] }>('/api/events', {
+    default: () => ({ events: [] })
   });
   
-  const events = ref<StreamEvent[]>(initialEvents.value || []);
+  const events = ref<StreamEvent[]>(initialData.value?.events || []);
   
   const stream = useEventsStream({ 
     maxEvents,

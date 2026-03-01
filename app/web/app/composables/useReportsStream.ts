@@ -7,6 +7,7 @@ export interface StreamReport {
   timeStarted?: string;
   timestamp: number;
   affectedLocations?: string[];
+  affectedResources?: string[];
   severity?: 'critical' | 'warning' | 'elevated' | 'normal';
 }
 

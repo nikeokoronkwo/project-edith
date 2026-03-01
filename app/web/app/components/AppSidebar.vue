@@ -135,11 +135,20 @@ const agentInitials = computed(() => {
   return name.value.split(' ').map(n => n[0]).join('').toUpperCase()
 })
 
-const mainItems = [
+const reportCount = ref<string | null>(null)
+
+onMounted(async () => {
+  try {
+    const data = await $fetch<{ total: number }>('/api/reports')
+    if (data.total > 0) reportCount.value = String(data.total)
+  } catch { /* badge is non-critical */ }
+})
+
+const mainItems = computed(() => [
   { title: 'Dashboard', url: '/dashboard', icon: 'heroicons:home', tag: null, badge: null },
   { title: 'Analytics', url: '/analytics', icon: 'heroicons:chart-bar', tag: 'LIVE', badge: null },
-  { title: 'Reports', url: '/reports', icon: 'heroicons:document-text', tag: null, badge: '12' },
-]
+  { title: 'Reports', url: '/reports', icon: 'heroicons:document-text', tag: null, badge: reportCount.value },
+])
 
 function isActive(url: string) {
   return route.path === url || route.path.startsWith(url + '/')
