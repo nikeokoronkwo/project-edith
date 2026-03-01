@@ -1,0 +1,82 @@
+[
+  {
+    "report_id": "e955628e-63aa-4a87-ba45-b7c2682604bd",
+    "timestamp": "2026-03-01T18:03:19.836081+00:00",
+    "metadata": {
+      "hero_alias": "Pietro Maximoff",
+      "secure_contact": ""
+    },
+    "raw_text": "Ultron is here. The city is moving. Vibranium reserves gone. We need evacuation NOW.",
+    "priority": "Urgent"
+  },
+  {
+    "report_id": "081200b9-df8b-4a15-ad58-139c6f9ac69e",
+    "timestamp": "2026-03-01T18:08:19.836081+00:00",
+    "metadata": {
+      "hero_alias": "Wanda Maximoff",
+      "secure_contact": ""
+    },
+    "raw_text": "Civilians trapped on the north plateau. Medical supplies almost zero. Water cut off.",
+    "priority": "Urgent"
+  },
+  {
+    "report_id": "1a6021f9-a9e4-4f9d-80b4-5284d403f024",
+    "timestamp": "2026-03-01T18:15:19.836081+00:00",
+    "metadata": {
+      "hero_alias": "Steve Rogers",
+      "secure_contact": ""
+    },
+    "raw_text": "Helicarrier inbound. Evacuating civilians. Vibranium completely stripped from city stockpiles.",
+    "priority": "Urgent"
+  },
+  {
+    "report_id": "346c595a-311f-49c5-a0ef-f11cdccb2dd2",
+    "timestamp": "2026-03-01T18:23:19.836081+00:00",
+    "metadata": {
+      "hero_alias": "Tony Stark",
+      "secure_contact": ""
+    },
+    "raw_text": "Pulling arc reactor resources to power the evacuation platform. Expect drain on compound reserves.",
+    "priority": "Routine"
+  },
+  {
+    "report_id": "52f305d7-9c8e-4027-85fd-46e637444802",
+    "timestamp": "2026-03-01T18:31:19.836081+00:00",
+    "metadata": {
+      "hero_alias": "T'Challa",
+      "secure_contact": ""
+    },
+    "raw_text": "Wakanda releasing vibranium emergency cache to support Sokovia recovery.",
+    "priority": "Routine"
+  },
+  {
+    "report_id": "ebeb4878-3a0c-4279-b7a4-63e13c4093e4",
+    "timestamp": "2026-03-01T18:43:19.836081+00:00",
+    "metadata": {
+      "hero_alias": "Steve Rogers",
+      "secure_contact": ""
+    },
+    "raw_text": "City fragment neutralised. Survivors accounted for. Medical resupply convoy en route from New Asgard.",
+    "priority": "Routine"
+  },
+  {
+    "report_id": "81f37333-e200-4056-aa45-2aae3ef04238",
+    "timestamp": "2026-03-01T18:58:19.836081+00:00",
+    "metadata": {
+      "hero_alias": "Bruce Banner",
+      "secure_contact": ""
+    },
+    "raw_text": "Hulk contained. Lab damaged. Resources at compound under strain but manageable.",
+    "priority": "Routine"
+  },
+  {
+    "report_id": "e500eac6-9abc-4698-aef4-440a96793e23",
+    "timestamp": "2026-03-01T19:13:19.836081+00:00",
+    "metadata": {
+      "hero_alias": "Wanda Maximoff",
+      "secure_contact": ""
+    },
+    "raw_text": "Sokovia stabilised. Clean water being restored. Reconstruction aid from Wakanda and New Asgard arriving.",
+    "priority": "Routine"
+  }
+]

@@ -60,9 +60,13 @@ cd backend
 python publisher.py
 ```
 
-**What it does:** Three daemon threads that continuously poll the DB and push
-telemetry ticks, new reports, and new intel events to the `shield_events` fanout
-exchange every 5–30 seconds. The Nuxt SSE streams consume from this exchange.
+**What it does:** Four daemon threads that continuously poll the DB and push
+telemetry ticks, new reports, new intel events, and **anomaly alerts** to the
+`shield_events` fanout exchange. The event-detector thread runs linear regression
+on each (sector, resource) telemetry series every 60 s; when depletion is
+accelerating significantly beyond baseline it publishes a `major_event_alert`
+message (with confidence score, affected pairs, ETA-to-zero, and corroborating
+field reports). The Nuxt SSE streams consume from this exchange.
 
 ---
 

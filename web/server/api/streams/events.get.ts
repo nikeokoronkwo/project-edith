@@ -3,7 +3,6 @@ import {
   setupEventQueue,
   RABBITMQ_QUEUE_EVENTS,
   parseMessage,
-  type RabbitMQMessage
 } from '~~/server/utils/rabbitmq';
 import type { ConsumeMessage } from 'amqplib';
 
@@ -16,44 +15,39 @@ export interface StreamEvent {
 }
 
 export default defineEventHandler(async (event: H3Event) => {
-  const stream = event.node.res;
-  
-  stream.writeHead(200, {
+  const res = event.node.res;
+
+  res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive',
-    'X-Accel-Buffering': 'no'
+    'X-Accel-Buffering': 'no',
   });
 
-  stream.write(`: Connected to events stream\n\n`);
+  res.write(': Connected to events stream\n\n');
 
-  try {
-    const channel = await setupEventQueue();
-    
-    const consumer = await channel.consume(RABBITMQ_QUEUE_EVENTS, (msg: ConsumeMessage | null) => {
-      if (msg) {
-        const parsed = parseMessage<Omit<StreamEvent, 'timestamp'>>(msg);
-        if (parsed) {
-          const content = parsed.content as StreamEvent;
-          const eventData: StreamEvent = {
-            ...content,
-            timestamp: content.timestamp
-              ?? (content.started ? new Date(content.started).getTime() : parsed.timestamp),
-          };
-          stream.write(`data: ${JSON.stringify(eventData)}\n\n`);
-        }
-        channel.ack(msg);
-      }
-    });
+  const channel = await setupEventQueue();
 
-    event.node.req.on('close', () => {
-      channel.cancel(consumer.consumerTag);
-    });
-    
-  } catch (error) {
-    console.error('[Events Stream] Error:', error);
-    stream.write(`error: ${JSON.stringify({ message: 'Stream error' })}\n\n`);
-  }
+  const consumer = await channel.consume(RABBITMQ_QUEUE_EVENTS, (msg: ConsumeMessage | null) => {
+    if (!msg) return;
+
+    const parsed = parseMessage<Omit<StreamEvent, 'timestamp'>>(msg);
+    if (parsed && !res.writableEnded) {
+      const content = parsed.content as StreamEvent;
+      const data: StreamEvent = {
+        ...content,
+        timestamp: content.timestamp
+          ?? (content.started ? new Date(content.started).getTime() : parsed.timestamp),
+      };
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    }
+
+    channel.ack(msg);
+  });
+
+  event.node.req.on('close', () => {
+    channel.close().catch(() => {});
+  });
 
   return new Promise(() => {});
 });

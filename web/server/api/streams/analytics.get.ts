@@ -3,7 +3,6 @@ import {
   setupAnalyticsQueue,
   RABBITMQ_QUEUE_ANALYTICS,
   parseMessage,
-  type RabbitMQMessage
 } from '~~/server/utils/rabbitmq';
 import type { ConsumeMessage } from 'amqplib';
 
@@ -16,42 +15,38 @@ export interface StreamAnalyticsData {
 }
 
 export default defineEventHandler(async (event: H3Event) => {
-  const stream = event.node.res;
-  
-  stream.writeHead(200, {
+  const res = event.node.res;
+
+  res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive',
-    'X-Accel-Buffering': 'no'
+    'X-Accel-Buffering': 'no',
   });
 
-  stream.write(`: Connected to analytics stream\n\n`);
+  res.write(': Connected to analytics stream\n\n');
 
-  try {
-    const channel = await setupAnalyticsQueue();
-    
-    const consumer = await channel.consume(RABBITMQ_QUEUE_ANALYTICS, (msg: ConsumeMessage | null) => {
-      if (msg) {
-        const parsed = parseMessage<StreamAnalyticsData>(msg);
-        if (parsed) {
-          const analyticsData: StreamAnalyticsData = {
-            ...parsed.content,
-            timestamp: parsed.timestamp
-          };
-          stream.write(`data: ${JSON.stringify(analyticsData)}\n\n`);
-        }
-        channel.ack(msg);
-      }
-    });
+  // Each SSE connection gets its own dedicated channel so bursts on one
+  // stream never block or starve another connection.
+  const channel = await setupAnalyticsQueue();
 
-    event.node.req.on('close', () => {
-      channel.cancel(consumer.consumerTag);
-    });
-    
-  } catch (error) {
-    console.error('[Analytics Stream] Error:', error);
-    stream.write(`error: ${JSON.stringify({ message: 'Stream error' })}\n\n`);
-  }
+  const consumer = await channel.consume(RABBITMQ_QUEUE_ANALYTICS, (msg: ConsumeMessage | null) => {
+    if (!msg) return;
+
+    const parsed = parseMessage<StreamAnalyticsData>(msg);
+    if (parsed && !res.writableEnded) {
+      const data: StreamAnalyticsData = { ...parsed.content, timestamp: parsed.timestamp };
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    }
+
+    channel.ack(msg);
+  });
+
+  // On disconnect: close the channel (auto-cancels the consumer and releases
+  // the AMQP slot). Calling channel.cancel() alone leaves the channel open.
+  event.node.req.on('close', () => {
+    channel.close().catch(() => {});
+  });
 
   return new Promise(() => {});
 });

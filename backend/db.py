@@ -12,11 +12,12 @@ import psycopg2
 import psycopg2.extras
 
 
+_DEFAULT_URL = "postgresql://edith_user:edith_password@localhost:5433/edith_db"
+
+
 def get_connection():
     """Open and return a psycopg2 connection from DATABASE_URL env var."""
-    url = os.environ.get("DATABASE_URL")
-    if not url:
-        raise RuntimeError("DATABASE_URL environment variable is not set.")
+    url = os.environ.get("DATABASE_URL", _DEFAULT_URL)
     return psycopg2.connect(url)
 
 

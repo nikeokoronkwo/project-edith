@@ -1,0 +1,172 @@
+[
+  {
+    "report_id": "ffde330b-2ec3-4617-b359-950d8a5fdaa8",
+    "timestamp": "2026-03-01T17:24:10.845894+00:00",
+    "metadata": {
+      "hero_alias": "Tony Stark",
+      "secure_contact": ""
+    },
+    "raw_text": "Tesseract portal confirmed above Stark Tower. Multiple bogies inbound. Activating Iron Legion. Arc reactor grid at full draw. Requesting all hands.",
+    "priority": "Urgent"
+  },
+  {
+    "report_id": "e36ac265-b3bc-4230-aabc-9d3f37e90fc0",
+    "timestamp": "2026-03-01T17:27:10.845894+00:00",
+    "metadata": {
+      "hero_alias": "Natasha Romanoff",
+      "secure_contact": ""
+    },
+    "raw_text": "Chitauri ground units breaching the perimeter. Medical bay overwhelmed\u2014requesting 200 additional medical kits from Wakanda reserves immediately.",
+    "priority": "Urgent"
+  },
+  {
+    "report_id": "1b8ff082-2aa2-401e-968f-83385494d640",
+    "timestamp": "2026-03-01T17:30:10.845894+00:00",
+    "metadata": {
+      "hero_alias": "Steve Rogers",
+      "secure_contact": ""
+    },
+    "raw_text": "We have Chitauri units in sector seven. Three civilians down. Clean water distribution points compromised. Air support needed over the compound.",
+    "priority": "Urgent"
+  },
+  {
+    "report_id": "354742a0-3b38-4b1b-b702-afd452ba185a",
+    "timestamp": "2026-03-01T17:34:10.845894+00:00",
+    "metadata": {
+      "hero_alias": "Clint Barton",
+      "secure_contact": ""
+    },
+    "raw_text": "Chitauri leviathan has cleared the outer wall. Arc reactor power cells depleting at triple the normal rate. Vibranium reinforcements holding the south corridor.",
+    "priority": "Urgent"
+  },
+  {
+    "report_id": "a695e6fd-ed2e-47aa-be80-c054b47a9cfc",
+    "timestamp": "2026-03-01T17:39:10.845894+00:00",
+    "metadata": {
+      "hero_alias": "Thor Odinson",
+      "secure_contact": ""
+    },
+    "raw_text": "Portal energy readings detected from New Asgard. Dispatching Einherjar to the compound. Medical kit stockpiles packaged for emergency airlift.",
+    "priority": "Routine"
+  },
+  {
+    "report_id": "b77a636c-ddf4-4a8a-b6a0-b17112885934",
+    "timestamp": "2026-03-01T17:42:10.845894+00:00",
+    "metadata": {
+      "hero_alias": "Wanda Maximoff",
+      "secure_contact": ""
+    },
+    "raw_text": "Secondary Chitauri wave has entered Sokovia airspace. Civilians evacuating. Water treatment plant is offline. Requesting SHIELD support.",
+    "priority": "Urgent"
+  },
+  {
+    "report_id": "a52bb428-83aa-4448-bc97-25c218e0159f",
+    "timestamp": "2026-03-01T17:46:10.845894+00:00",
+    "metadata": {
+      "hero_alias": "Vision",
+      "secure_contact": ""
+    },
+    "raw_text": "Energy output from the tesseract sceptre spike detected. Pym Particle containment units at Sanctum Sanctorum showing anomalous readings. Recommend isolation protocol.",
+    "priority": "Routine"
+  },
+  {
+    "report_id": "56fdf681-6319-4c83-ad50-7e102cfecedd",
+    "timestamp": "2026-03-01T17:52:10.845894+00:00",
+    "metadata": {
+      "hero_alias": "Sam Wilson",
+      "secure_contact": ""
+    },
+    "raw_text": "EXO-7 wing damaged. Arc reactor cores at 18% capacity in the east block. Requesting emergency cores from the Stark warehouse. We will not hold without them.",
+    "priority": "Urgent"
+  },
+  {
+    "report_id": "f6c29a1e-704a-4ce8-9d1f-27e1ac358068",
+    "timestamp": "2026-03-01T17:59:10.845894+00:00",
+    "metadata": {
+      "hero_alias": "T'Challa",
+      "secure_contact": ""
+    },
+    "raw_text": "Wakanda is dispatching 50 kg of vibranium plating to reinforce the compound perimeter. Border Tribe mobilised. Expect convoy arrival within the hour.",
+    "priority": "Routine"
+  },
+  {
+    "report_id": "c1b00a61-810e-4ebc-b073-1b6b21818fad",
+    "timestamp": "2026-03-01T18:09:10.845894+00:00",
+    "metadata": {
+      "hero_alias": "Bruce Banner",
+      "secure_contact": ""
+    },
+    "raw_text": "The Hulk is contained. Lab is intact but power is down to 8%. Arc reactor cores fully depleted in Block C. Other hulk out imminent if we lose containment.",
+    "priority": "Urgent"
+  },
+  {
+    "report_id": "7a1e9592-81c8-46da-968b-cfde04c21e50",
+    "timestamp": "2026-03-01T18:16:10.845894+00:00",
+    "metadata": {
+      "hero_alias": "Tony Stark",
+      "secure_contact": ""
+    },
+    "raw_text": "Nuke disposal complete. Warhead was Chitauri. Arc reactor cells blown across the north quad\u2014stock critical. Portal structure is weakening. Preparing to close it.",
+    "priority": "Urgent"
+  },
+  {
+    "report_id": "831d9634-07c1-40a2-91d6-66aea64ae8d8",
+    "timestamp": "2026-03-01T18:24:10.845894+00:00",
+    "metadata": {
+      "hero_alias": "Thor Odinson",
+      "secure_contact": ""
+    },
+    "raw_text": "Asgardian medical convoy has arrived. 120 kits distributed to field stations. Bifrost stable. New Asgard reserves stretched but holding.",
+    "priority": "Routine"
+  },
+  {
+    "report_id": "935f3746-360b-4368-9056-ef76e31ac7e9",
+    "timestamp": "2026-03-01T18:32:10.845894+00:00",
+    "metadata": {
+      "hero_alias": "Tony Stark",
+      "secure_contact": ""
+    },
+    "raw_text": "Portal closed. Iron Man mark XLVII offline\u2014taking it in for repairs. Arc reactor cores still critical but the rate has dropped. Good job everyone.",
+    "priority": "Routine"
+  },
+  {
+    "report_id": "90ff026f-034e-4187-b695-123f4f8bb8b4",
+    "timestamp": "2026-03-01T18:39:10.845894+00:00",
+    "metadata": {
+      "hero_alias": "Stephen Strange",
+      "secure_contact": ""
+    },
+    "raw_text": "Mystic barrier projected over the compound. Pym Particle readings normalising. Sorcerers on standby for clean-up. Recommend a full resource audit within 24 hours.",
+    "priority": "Routine"
+  },
+  {
+    "report_id": "7d379844-db60-4010-b33d-e91727779052",
+    "timestamp": "2026-03-01T18:49:10.845894+00:00",
+    "metadata": {
+      "hero_alias": "Natasha Romanoff",
+      "secure_contact": ""
+    },
+    "raw_text": "Perimeter secured. Medical stations processing final casualties. Clean water supply restored to the east wing. Compound functional but resources stretched thin.",
+    "priority": "Routine"
+  },
+  {
+    "report_id": "ec81f327-5c9c-4f24-8a90-3842e3b009a3",
+    "timestamp": "2026-03-01T18:59:10.845894+00:00",
+    "metadata": {
+      "hero_alias": "Steve Rogers",
+      "secure_contact": ""
+    },
+    "raw_text": "Sokovia stabilised. Chitauri remnants neutralised. Water treatment back online\u2014expect full restoration in 6 hours. Population returning to shelters.",
+    "priority": "Routine"
+  },
+  {
+    "report_id": "c98d05f8-8b9a-427f-b788-efe6befb1e3e",
+    "timestamp": "2026-03-01T19:09:10.845894+00:00",
+    "metadata": {
+      "hero_alias": "Tony Stark",
+      "secure_contact": ""
+    },
+    "raw_text": "Arc reactor emergency stock arrived from Stark Industries facility. 80 cores delivered. Full post-incident resource audit underway. Situation resolved.",
+    "priority": "Routine"
+  }
+]

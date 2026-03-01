@@ -5,7 +5,8 @@ generate_telemetry.py — Generate historical_avengers_data.csv
 90-day, hourly time series for 5 sectors × 5 resources = 25 series × 2160 ticks = 54,000 rows.
 
 Timeline:
-  2025-10-18 18:00 UTC → 2026-01-16 18:00 UTC  (90 days)
+  END = current UTC hour (so the latest data point is always "now")
+  START = END − 90 days
   Days  0–35  (40 %): Normal economic activity — stable stocks, regular resupply
   Days 36–89  (60 %): Event X "Operation Crimson Siege" — progressive multi-front
                        attack on SHIELD supply infrastructure
@@ -27,14 +28,15 @@ Output columns:
 import csv
 import math
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # ── Reproducibility ───────────────────────────────────────────────────────────
 RNG = random.Random(20250301)
 
 # ── Time constants ────────────────────────────────────────────────────────────
-END         = datetime(2026, 1, 16, 18, 0)
+# END is always the current UTC hour so the last data point is always "now".
+END         = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0, tzinfo=None)
 TOTAL_DAYS  = 90
 START       = END - timedelta(days=TOTAL_DAYS)
 NORMAL_DAYS = 36      # days 0–35 (40 %)
@@ -387,7 +389,7 @@ def main() -> None:
     print(f"Written {len(rows):,} rows → {out}")
 
     # ── Sanity-check: final stock levels ─────────────────────────────────────
-    print("\nFinal stock levels at day 89 (2026-01-16):")
+    print(f"\nFinal stock levels at day 89 ({END.date()}):")
     print(f"  {'Sector':<24} {'Resource':<22} {'Final':>10} {'Initial':>10} {'%':>7}")
     print("  " + "-" * 75)
 

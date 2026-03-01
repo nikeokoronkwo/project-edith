@@ -12,25 +12,34 @@ SCHEMA_PATH = Path(__file__).parent.parent.parent / "SCHEMA.sql"
 def apply_schema(db_url: str) -> None:
     raw = SCHEMA_PATH.read_text()
 
-    # Split on statement boundaries, skip blank lines and comment-only chunks
-    statements = []
+    # Drop in reverse-dependency order so FK constraints don't block the drops.
+    # CASCADE handles any remaining cross-references.
+    drop_stmts = [
+        "DROP TABLE IF EXISTS telemetry_readings CASCADE",
+        "DROP TABLE IF EXISTS redaction_audit CASCADE",
+        "DROP TABLE IF EXISTS intel_extracted CASCADE",
+        "DROP TABLE IF EXISTS reports CASCADE",
+    ]
+
+    # Split CREATE statements on semicolons, skip blank / comment-only chunks.
+    create_stmts = []
     for chunk in raw.split(";"):
         stmt = chunk.strip()
-        # Drop lines that are only SQL comments, keep mixed content
-        code_lines = [ln for ln in stmt.splitlines() if ln.strip() and not ln.strip().startswith("--")]
-        if not code_lines:
-            continue
-        stmt = stmt.replace("CREATE TABLE ", "CREATE TABLE IF NOT EXISTS ")
-        statements.append(stmt)
+        code_lines = [ln for ln in stmt.splitlines()
+                      if ln.strip() and not ln.strip().startswith("--")]
+        if code_lines:
+            create_stmts.append(stmt)
 
     conn = psycopg2.connect(db_url)
     conn.autocommit = True
     try:
         with conn.cursor() as cur:
-            for stmt in statements:
+            for stmt in drop_stmts:
+                cur.execute(stmt)
+            for stmt in create_stmts:
                 cur.execute(stmt)
         print(f"Schema applied successfully to {db_url.split('@')[-1]}")
-        print(f"  ({len(statements)} statements executed)")
+        print(f"  ({len(drop_stmts)} drops + {len(create_stmts)} creates)")
     finally:
         conn.close()
 

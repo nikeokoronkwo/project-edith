@@ -38,6 +38,8 @@ import pika
 import psycopg2
 import psycopg2.extras
 
+from event_detector import run_event_detector, SCAN_INTERVAL
+
 log = logging.getLogger(__name__)
 
 RABBITMQ_EXCHANGE = "shield_events"
@@ -335,9 +337,10 @@ def run_event_watcher(
 def start_publisher(
     telemetry_interval: int = TELEMETRY_INTERVAL,
     watcher_interval: int = WATCHER_INTERVAL,
+    detector_interval: int = SCAN_INTERVAL,
 ) -> tuple[threading.Event, list[threading.Thread]]:
     """
-    Start the three background publisher threads as daemons.
+    Start the four background publisher threads as daemons.
 
     Returns (stop_event, threads).  Call stop_event.set() to request a clean
     shutdown; join the threads to wait for completion.
@@ -361,6 +364,12 @@ def start_publisher(
             target=run_event_watcher,
             kwargs={"interval": watcher_interval, "stop_event": stop},
             name="event-watcher",
+            daemon=True,
+        ),
+        threading.Thread(
+            target=run_event_detector,
+            kwargs={"interval": detector_interval, "stop_event": stop},
+            name="event-detector",
             daemon=True,
         ),
     ]

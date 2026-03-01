@@ -3,7 +3,6 @@ import {
   setupReportsQueue,
   RABBITMQ_QUEUE_REPORTS,
   parseMessage,
-  type RabbitMQMessage
 } from '~~/server/utils/rabbitmq';
 import type { ConsumeMessage } from 'amqplib';
 
@@ -19,44 +18,39 @@ export interface StreamReport {
 }
 
 export default defineEventHandler(async (event: H3Event) => {
-  const stream = event.node.res;
-  
-  stream.writeHead(200, {
+  const res = event.node.res;
+
+  res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive',
-    'X-Accel-Buffering': 'no'
+    'X-Accel-Buffering': 'no',
   });
 
-  stream.write(`: Connected to reports stream\n\n`);
+  res.write(': Connected to reports stream\n\n');
 
-  try {
-    const channel = await setupReportsQueue();
-    
-    const consumer = await channel.consume(RABBITMQ_QUEUE_REPORTS, (msg: ConsumeMessage | null) => {
-      if (msg) {
-        const parsed = parseMessage<Omit<StreamReport, 'timestamp'>>(msg);
-        if (parsed) {
-          const content = parsed.content as StreamReport;
-          const reportData: StreamReport = {
-            ...content,
-            timestamp: content.timestamp
-              ?? (content.timeStarted ? new Date(content.timeStarted).getTime() : parsed.timestamp),
-          };
-          stream.write(`data: ${JSON.stringify(reportData)}\n\n`);
-        }
-        channel.ack(msg);
-      }
-    });
+  const channel = await setupReportsQueue();
 
-    event.node.req.on('close', () => {
-      channel.cancel(consumer.consumerTag);
-    });
-    
-  } catch (error) {
-    console.error('[Reports Stream] Error:', error);
-    stream.write(`error: ${JSON.stringify({ message: 'Stream error' })}\n\n`);
-  }
+  const consumer = await channel.consume(RABBITMQ_QUEUE_REPORTS, (msg: ConsumeMessage | null) => {
+    if (!msg) return;
+
+    const parsed = parseMessage<Omit<StreamReport, 'timestamp'>>(msg);
+    if (parsed && !res.writableEnded) {
+      const content = parsed.content as StreamReport;
+      const data: StreamReport = {
+        ...content,
+        timestamp: content.timestamp
+          ?? (content.timeStarted ? new Date(content.timeStarted).getTime() : parsed.timestamp),
+      };
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    }
+
+    channel.ack(msg);
+  });
+
+  event.node.req.on('close', () => {
+    channel.close().catch(() => {});
+  });
 
   return new Promise(() => {});
 });
