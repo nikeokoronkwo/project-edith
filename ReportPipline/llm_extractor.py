@@ -15,6 +15,7 @@ Python computes:  modifier_type, modifier_value, modifier_duration_hours.
 import json
 import re
 from pathlib import Path
+from typing import Optional
 
 import requests
 
@@ -39,7 +40,15 @@ VALID_RESOURCES = {
     "Vibranium (kg)",
 }
 
-VALID_EVENT_TYPES = {"DEPLETION", "DISRUPTION", "THREAT", "RESUPPLY"}
+VALID_EVENT_TYPES = {"DEPLETION", "DISRUPTION", "THREAT", "RESUPPLY", "THANOS", "CATASTROPHIC"}
+
+# Keyword triggers for special event types — checked before calling the LLM.
+# THANOS takes priority over CATASTROPHIC if both match.
+THANOS_KEYWORDS = {"thanos snap", "thanos", "snap"}
+CATASTROPHIC_KEYWORDS = {
+    "nuke", "nuclear", "earthquake", "tsunami", "tornado",
+    "hurricane", "flood", "wildfire", "meteor", "natural disaster",
+}
 
 # Fix 2: Lookup map from stripped (no-unit) lowercase name → canonical resource name.
 # Handles cases where Llama adds a wrong unit suffix (e.g. "Pym Particles (kg)").
@@ -56,11 +65,14 @@ _RESOURCE_LOOKUP: dict[str, str] = {
 #   usage_rate_multiplier > 1.0  → resource burning faster than normal
 #   usage_rate_multiplier < 0.0  → effective usage reduced (cache found)
 #   resupply_halt = 0.0          → supply chain stopped, no new stock incoming
+#   thanos_snap   = 0.0          → instantaneous universal event, not time-scaled
 MODIFIER_TABLE: dict[str, dict] = {
-    "DEPLETION":  {"modifier_type": "usage_rate_multiplier", "modifier_value": 2.0,  "modifier_duration_hours": 48},
-    "DISRUPTION": {"modifier_type": "resupply_halt",         "modifier_value": 0.0,  "modifier_duration_hours": 72},
-    "THREAT":     {"modifier_type": "usage_rate_multiplier", "modifier_value": 1.5,  "modifier_duration_hours": 24},
-    "RESUPPLY":   {"modifier_type": "usage_rate_multiplier", "modifier_value": -0.5, "modifier_duration_hours": 12},
+    "DEPLETION":    {"modifier_type": "usage_rate_multiplier", "modifier_value": 2.0,  "modifier_duration_hours": 48},
+    "DISRUPTION":   {"modifier_type": "resupply_halt",         "modifier_value": 0.0,  "modifier_duration_hours": 72},
+    "THREAT":       {"modifier_type": "usage_rate_multiplier", "modifier_value": 1.5,  "modifier_duration_hours": 24},
+    "RESUPPLY":     {"modifier_type": "usage_rate_multiplier", "modifier_value": -0.5, "modifier_duration_hours": 12},
+    "THANOS":       {"modifier_type": "thanos_snap",           "modifier_value": 0.0,  "modifier_duration_hours": 0},
+    "CATASTROPHIC": {"modifier_type": "usage_rate_multiplier", "modifier_value": 5.0,  "modifier_duration_hours": 168},
 }
 
 SYSTEM_PROMPT = """You are an intelligence analyst processing field reports.
@@ -87,6 +99,22 @@ Event type guide:
 Return nothing except the JSON object."""
 
 # ── Core functions ─────────────────────────────────────────────────────────
+
+
+def _detect_special_event(text: str) -> Optional[str]:
+    """
+    Check the input text for special event keywords before calling the LLM.
+
+    Priority: THANOS > CATASTROPHIC > None (proceed with normal LLM extraction).
+
+    Returns "THANOS", "CATASTROPHIC", or None.
+    """
+    lower = text.lower()
+    if any(kw in lower for kw in THANOS_KEYWORDS):
+        return "THANOS"
+    if any(kw in lower for kw in CATASTROPHIC_KEYWORDS):
+        return "CATASTROPHIC"
+    return None
 
 
 def _call_llm(tokenized_text: str) -> tuple[dict, str]:
@@ -190,8 +218,28 @@ def extract(tokenized_text: str, report_id: str) -> tuple[dict, dict, str]:
         - modifier: {modifier_type, modifier_value, modifier_duration_hours}
         - raw_llm_response: raw JSON string from the LLM (for DB storage)
     """
+    special = _detect_special_event(tokenized_text)
+
+    # ── THANOS path: skip LLM entirely ────────────────────────────────────────
+    if special == "THANOS":
+        extraction_result = {
+            "sector":     None,
+            "resource":   None,
+            "severity":   None,
+            "event_type": "THANOS",
+            "summary":    None,
+        }
+        modifier = MODIFIER_TABLE["THANOS"].copy()
+        return extraction_result, modifier, "{}"
+
+    # ── Normal LLM path ────────────────────────────────────────────────────────
     parsed, raw_llm_response = _call_llm(tokenized_text)
     extraction_result = _validate(parsed)
+
+    # ── CATASTROPHIC override: LLM extracts fields, we force the event_type ───
+    if special == "CATASTROPHIC":
+        extraction_result["event_type"] = "CATASTROPHIC"
+
     modifier = _compute_modifier(extraction_result["event_type"], extraction_result["severity"])
     return extraction_result, modifier, raw_llm_response
 
