@@ -1,27 +1,50 @@
 """
 api.py — FastAPI backend for the Avengers Intel Pipeline.
 
-Single endpoint:
-    POST /reports  — accepts a hero's structured report, runs M1 + M2, saves to DB.
+Endpoints under /api:
+    POST /api/reports          — submit a new report (accepts frontend & direct shapes)
+    GET  /api/reports          — list processed reports
+    GET  /api/reports/{id}     — single report
+    GET  /api/events           — list events (derived from intel_extracted)
+    GET  /api/events/{id}      — single event
+    GET  /api/analytics        — telemetry time-series data
+    GET  /api/analytics/sector/{sector}     — sector breakdown
+    GET  /api/analytics/resource/{resource} — resource breakdown
+    GET  /api/analytics/forecast            — simple linear forecast
 
 Run with:
-    export DATABASE_URL="postgresql://user:password@localhost:5432/yourdb"
-    uvicorn api:app --reload
+    export DATABASE_URL="postgresql://edith_user:edith_password@localhost:5433/edith_db"
+    uvicorn api:app --host 0.0.0.0 --port 8080
 """
 
+import base64
+import json
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 
-from db import get_connection, insert_report, insert_intel_extracted, insert_redaction_audit
+from db import (
+    get_connection,
+    insert_report,
+    insert_intel_extracted,
+    insert_redaction_audit,
+    get_reports,
+    get_report_by_id,
+    get_events,
+    get_event_by_id,
+    get_analytics,
+    get_sector_analytics,
+    get_resource_analytics,
+    get_telemetry_for_forecast,
+)
 from llm_extractor import VALID_SECTORS
 from pipeline import process_report
 
-app = FastAPI(title="Avengers Intel API", version="1.0.0")
+app = FastAPI(title="Avengers Intel API", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,81 +53,120 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Text synthesis ──────────────────────────────────────────────────────────
+router = APIRouter(prefix="/api")
 
-def _build_raw_text(hero_alias: str, secure_contact: Optional[str], sector: str, event_description: str) -> str:
-    """
-    Combine structured fields into a natural-language report body.
-    The LLM (Module 2) will extract resource, event_type, and severity from this text.
-    If secure_contact is provided it appears in the body so Module 1 can redact it.
-    """
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+
+def _decode_jwt_payload(token: str) -> dict:
+    """Base64-decode a JWT payload without verification (we trust the Nuxt server)."""
+    try:
+        parts = token.split(".")
+        if len(parts) != 3:
+            return {}
+        payload = parts[1]
+        payload += "=" * (4 - len(payload) % 4)
+        return json.loads(base64.urlsafe_b64decode(payload))
+    except Exception:
+        return {}
+
+
+def _severity_to_label(severity: int | None) -> str:
+    if severity is None:
+        return "normal"
+    if severity >= 9:
+        return "critical"
+    if severity >= 7:
+        return "warning"
+    if severity >= 4:
+        return "elevated"
+    return "normal"
+
+
+def _format_report_for_frontend(row: dict) -> dict:
+    """Shape a joined reports+intel_extracted DB row into the frontend Report type."""
+    ts = row.get("timestamp")
+    return {
+        "heroAlias": row.get("operative_name", "Unknown"),
+        "description": row.get("redacted_text") or row.get("raw_text", ""),
+        "affectedResources": [row["resource"]] if row.get("resource") else [],
+        "affectedLocations": [row["sector"]] if row.get("sector") else [],
+        "relatedReportIds": [],
+        "timeStarted": ts.isoformat() if ts else "",
+        "metadata": row.get("report_id", ""),
+        "severity": _severity_to_label(row.get("severity")),
+        "reportId": str(row.get("report_id", "")),
+        "status": row.get("status", ""),
+        "sector": row.get("sector", ""),
+        "resource": row.get("resource", ""),
+        "eventType": row.get("event_type", ""),
+        "summary": row.get("summary", ""),
+    }
+
+
+def _build_raw_text(
+    hero_alias: str, secure_contact: str | None, sector: str, description: str
+) -> str:
     if secure_contact:
         return (
-            f"This is {hero_alias}, reporting from {sector}. {event_description} "
+            f"This is {hero_alias}, reporting from {sector}. {description} "
             f"Call me back at {secure_contact}."
         )
-    return f"This is {hero_alias}, reporting from {sector}. {event_description}"
+    return f"This is {hero_alias}, reporting from {sector}. {description}"
 
 
-# ── Pydantic models ─────────────────────────────────────────────────────────
-
-class ReportRequest(BaseModel):
-    hero_alias:        str
-    sector:            str
-    event_description: str
-    secure_contact:    Optional[str] = None
-    priority:          str = "Routine"
-
-    @field_validator("sector")
-    @classmethod
-    def validate_sector(cls, v):
-        if v not in VALID_SECTORS:
-            raise ValueError(f"sector must be one of: {sorted(VALID_SECTORS)}")
-        return v
+# ── POST /api/reports ────────────────────────────────────────────────────────
 
 
-class ReportResponse(BaseModel):
-    report_id:              str
-    status:                 str
-    sector:                 str
-    resource:               str
-    severity:               int
-    event_type:             str
-    summary:                str
-    modifier_type:          str
-    modifier_value:         float
-    modifier_duration_hours: int
+class FrontendReportRequest(BaseModel):
+    """Shape sent by the Nuxt server proxy (new.post.ts)."""
+    description: str
+    affectedResources: list[str] = []
+    affectedLocations: list[str] = []
+    relatedReportIds: list[str] = []
+    timeStarted: Optional[str] = None
+    metadata: str = ""
+    hero_alias: Optional[str] = None
+    sector: Optional[str] = None
+    event_description: Optional[str] = None
+    secure_contact: Optional[str] = None
+    priority: str = "Routine"
 
 
-# ── Endpoint ────────────────────────────────────────────────────────────────
+@router.post("/reports")
+def submit_report(body: FrontendReportRequest):
+    is_direct = body.hero_alias is not None and body.sector is not None
 
-@app.post("/reports", response_model=ReportResponse)
-def submit_report(body: ReportRequest):
-    """
-    Accept a hero's report, run the full pipeline, persist to DB, return results.
+    if is_direct:
+        hero_alias = body.hero_alias
+        sector = body.sector
+        description = body.event_description or body.description
+        secure_contact = body.secure_contact
+    else:
+        jwt_data = _decode_jwt_payload(body.metadata) if body.metadata else {}
+        hero_alias = jwt_data.get("heroAlias", "Unknown Operative")
+        sector = body.affectedLocations[0] if body.affectedLocations else "Avengers Compound"
+        description = body.description
+        secure_contact = None
 
-    Flow:
-      1. Synthesize raw_text from structured fields
-      2. pipeline.process_report() — M1 tokenization + M2 LLM extraction
-      3. INSERT into reports, intel_extracted, redaction_audit
-      4. Return processed result
-    """
+    if sector not in VALID_SECTORS:
+        closest = min(VALID_SECTORS, key=lambda s: _fuzzy_score(s, sector))
+        sector = closest
+
     report_id = str(uuid.uuid4())
-    timestamp = datetime.now(timezone.utc).isoformat()
+    timestamp = body.timeStarted or datetime.now(timezone.utc).isoformat()
 
-    raw_text = _build_raw_text(
-        body.hero_alias, body.secure_contact,
-        body.sector, body.event_description,
-    )
+    raw_text = _build_raw_text(hero_alias, secure_contact, sector, description)
 
     report_dict = {
         "report_id": report_id,
         "timestamp": timestamp,
-        "raw_text":  raw_text,
-        "priority":  body.priority,
+        "raw_text": raw_text,
+        "priority": body.priority,
         "metadata": {
-            "hero_alias":     body.hero_alias,
-            "secure_contact": body.secure_contact or "",
+            "hero_alias": hero_alias,
+            "secure_contact": secure_contact or "",
         },
     }
 
@@ -123,18 +185,185 @@ def submit_report(body: ReportRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
-    ext = result["extraction_result"]
-    mod = result["modifier"]
+    return {
+        "success": True,
+        "reportId": report_id,
+        "message": "Report processed successfully",
+    }
 
-    return ReportResponse(
-        report_id              = result["report_row"]["report_id"],
-        status                 = result["report_row"]["status"],
-        sector                 = ext["sector"],
-        resource               = ext["resource"],
-        severity               = ext["severity"],
-        event_type             = ext["event_type"],
-        summary                = ext["summary"],
-        modifier_type          = mod["modifier_type"],
-        modifier_value         = mod["modifier_value"],
-        modifier_duration_hours = mod["modifier_duration_hours"],
-    )
+
+def _fuzzy_score(a: str, b: str) -> int:
+    """Simple char-overlap distance for sector name matching."""
+    a_lower, b_lower = a.lower(), b.lower()
+    if a_lower == b_lower:
+        return 0
+    if a_lower in b_lower or b_lower in a_lower:
+        return 1
+    return sum(1 for c in b_lower if c not in a_lower)
+
+
+# ── GET /api/reports ─────────────────────────────────────────────────────────
+
+
+@router.get("/reports")
+def list_reports(limit: int = Query(50, ge=1, le=500), offset: int = Query(0, ge=0)):
+    conn = get_connection()
+    try:
+        rows, total = get_reports(conn, limit, offset)
+    finally:
+        conn.close()
+    return {
+        "reports": [_format_report_for_frontend(r) for r in rows],
+        "total": total,
+    }
+
+
+@router.get("/reports/{report_id}")
+def read_report(report_id: str):
+    conn = get_connection()
+    try:
+        row = get_report_by_id(conn, report_id)
+    finally:
+        conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Report not found")
+    return _format_report_for_frontend(row)
+
+
+# ── GET /api/events ──────────────────────────────────────────────────────────
+
+
+@router.get("/events")
+def list_events(
+    priority: Optional[int] = Query(None, ge=1, le=4),
+    limit: int = Query(50, ge=1, le=500),
+):
+    conn = get_connection()
+    try:
+        events = get_events(conn, priority, limit)
+    finally:
+        conn.close()
+    return {"events": events}
+
+
+@router.get("/events/{event_id}")
+def read_event(event_id: str):
+    conn = get_connection()
+    try:
+        event = get_event_by_id(conn, event_id)
+    finally:
+        conn.close()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return event
+
+
+# ── GET /api/analytics ───────────────────────────────────────────────────────
+
+
+@router.get("/analytics")
+def read_analytics(
+    resource: Optional[str] = None,
+    sector: Optional[str] = None,
+    limit: int = Query(200, ge=1, le=5000),
+):
+    conn = get_connection()
+    try:
+        data = get_analytics(conn, resource, sector, limit)
+    finally:
+        conn.close()
+    return {"data": data}
+
+
+@router.get("/analytics/sector/{sector}")
+def read_sector_analytics(sector: str):
+    conn = get_connection()
+    try:
+        result = get_sector_analytics(conn, sector)
+    finally:
+        conn.close()
+    return result
+
+
+@router.get("/analytics/resource/{resource}")
+def read_resource_analytics(resource: str):
+    conn = get_connection()
+    try:
+        result = get_resource_analytics(conn, resource)
+    finally:
+        conn.close()
+    return result
+
+
+@router.get("/analytics/forecast")
+def read_forecast(
+    resource: str = Query(...),
+    sector: Optional[str] = None,
+    days: int = Query(30, ge=1, le=365),
+):
+    conn = get_connection()
+    try:
+        readings = get_telemetry_for_forecast(conn, resource, sector, limit=100)
+    finally:
+        conn.close()
+
+    if not readings:
+        raise HTTPException(status_code=404, detail="No data for forecast")
+
+    values = [r["stock_level"] for r in readings]
+    timestamps = [r["timestamp"].timestamp() for r in readings]
+
+    current = values[-1]
+    n = len(values)
+
+    if n >= 2:
+        x_mean = sum(range(n)) / n
+        y_mean = sum(values) / n
+        num = sum((i - x_mean) * (v - y_mean) for i, v in enumerate(values))
+        den = sum((i - x_mean) ** 2 for i in range(n))
+        slope = num / den if den else 0
+    else:
+        slope = 0
+
+    if slope < -0.5:
+        trend = "decreasing"
+        impact = "high" if abs(slope) > 2 else "medium"
+    elif slope > 0.5:
+        trend = "increasing"
+        impact = "low"
+    else:
+        trend = "stable"
+        impact = "low"
+
+    last_ts = timestamps[-1]
+    hours_per_step = 1
+    if n >= 2:
+        hours_per_step = max(1, (timestamps[-1] - timestamps[0]) / (n - 1) / 3600)
+
+    forecast_points = []
+    for step in range(1, days * 24 + 1, max(1, int(hours_per_step))):
+        predicted = current + slope * step
+        predicted = max(0, predicted)
+        forecast_points.append({
+            "timestamp": int((last_ts + step * 3600) * 1000),
+            "predicted": round(predicted, 2),
+            "lower": round(max(0, predicted * 0.85), 2),
+            "upper": round(predicted * 1.15, 2),
+        })
+        if len(forecast_points) >= 200:
+            break
+
+    return {
+        "resource": resource,
+        "sector": sector,
+        "currentValue": round(current, 2),
+        "forecast": forecast_points,
+        "description": f"{resource} stock is {trend} at {round(current, 1)} units",
+        "trend": trend,
+        "impact": impact,
+    }
+
+
+# ── Mount router & run ───────────────────────────────────────────────────────
+
+app.include_router(router)

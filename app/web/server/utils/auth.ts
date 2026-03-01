@@ -3,6 +3,7 @@ import { jwt } from "better-auth/plugins"
 import { Pool } from "pg";
 
 export const auth = betterAuth({
+  baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:3000',
   emailAndPassword: { 
     enabled: true, 
   },
@@ -10,7 +11,6 @@ export const auth = betterAuth({
     jwt()
   ],
   database: new Pool({
-      // connection options
-      connectionString: process.env.DATABASE_URL || 'postgresql://edith_user:edith_password@localhost:5432/edith_db',
+      connectionString: process.env.DATABASE_URL || 'postgresql://edith_user:edith_password@localhost:5433/edith_db',
   }),
 })
