@@ -17,7 +17,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 
-from db import get_connection, insert_intel_extracted, insert_redaction_audit, insert_report
+from db import get_connection, insert_report, insert_intel_extracted, insert_redaction_audit
 from llm_extractor import VALID_SECTORS
 from pipeline import process_report
 
@@ -64,12 +64,16 @@ class ReportRequest(BaseModel):
 
 
 class ReportResponse(BaseModel):
-    report_id:     str
-    status:        str
-    redacted_text: str
-    intel:         dict
-    modifier:      dict
-    audit_count:   int
+    report_id:              str
+    status:                 str
+    sector:                 str
+    resource:               str
+    severity:               int
+    event_type:             str
+    summary:                str
+    modifier_type:          str
+    modifier_value:         float
+    modifier_duration_hours: int
 
 
 # ── Endpoint ────────────────────────────────────────────────────────────────
@@ -112,18 +116,25 @@ def submit_report(body: ReportRequest):
     try:
         conn = get_connection()
         insert_report(conn, result["report_row"])
-        insert_intel_extracted(conn, result["intel_row"])
         insert_redaction_audit(conn, result["audit_rows"])
+        insert_intel_extracted(conn, result["intel_row"])
         conn.commit()
         conn.close()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
+    ext = result["extraction_result"]
+    mod = result["modifier"]
+
     return ReportResponse(
-        report_id     = result["report_row"]["report_id"],
-        status        = result["report_row"]["status"],
-        redacted_text = result["report_row"]["redacted_text"],
-        intel         = result["extraction_result"],
-        modifier      = result["modifier"],
-        audit_count   = len(result["audit_rows"]),
+        report_id              = result["report_row"]["report_id"],
+        status                 = result["report_row"]["status"],
+        sector                 = ext["sector"],
+        resource               = ext["resource"],
+        severity               = ext["severity"],
+        event_type             = ext["event_type"],
+        summary                = ext["summary"],
+        modifier_type          = mod["modifier_type"],
+        modifier_value         = mod["modifier_value"],
+        modifier_duration_hours = mod["modifier_duration_hours"],
     )
