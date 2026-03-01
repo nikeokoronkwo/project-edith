@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  --color-shield-50: #e6f7ff;
+  --color-shield-100: #b3e0ff;
+  --color-shield-200: #80c9ff;
+  --color-shield-300: #4db3ff;
+  --color-shield-400: #1a9cff;
+  --color-shield-500: #0080e6;
+  --color-shield-600: #0064b3;
+  --color-shield-700: #004880;
+  --color-shield-800: #002c4d;
+  --color-shield-900: #00101a;
+
+  --color-iron-50: #f0f4f8;
+  --color-iron-100: #d9e2ec;
+  --color-iron-200: #bcccdc;
+  --color-iron-300: #9fb3c8;
+  --color-iron-400: #829ab1;
+  --color-iron-500: #627d98;
+  --color-iron-600: #486581;
+  --color-iron-700: #334e68;
+  --color-iron-800: #243b53;
+  --color-iron-900: #102a43;
+
+  --color-priority-routine: #3b82f6;
+  --color-priority-high: #f59e0b;
+  --color-priority-critical: #ef4444;
+}
+
+:root {
+  --shield-primary: #0080e6;
+  --shield-dark: #002c4d;
+  --iron-dark: #102a43;
+}
+
+body {
+  @apply bg-iron-900 text-gray-100;
+}
+
+.glass-panel {
+  @apply bg-iron-800/50 backdrop-blur-md border border-iron-700/50 rounded-lg;
+}
