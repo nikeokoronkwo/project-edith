@@ -54,3 +54,17 @@ CREATE TABLE redaction_audit (
     detection_layer     VARCHAR(20),                   -- REGEX, NER
     created_at          TIMESTAMPTZ DEFAULT NOW()
 );
+
+
+-- TABLE 4: Telemetry readings (resource stock levels per sector over time)
+CREATE TABLE telemetry_readings (
+    id                  SERIAL PRIMARY KEY,
+    timestamp           TIMESTAMPTZ NOT NULL,
+    sector_id           VARCHAR(50) NOT NULL,
+    resource_type       VARCHAR(50) NOT NULL,
+    stock_level         FLOAT NOT NULL,
+    usage_rate_hourly   FLOAT NOT NULL,
+    snap_event_detected BOOLEAN DEFAULT FALSE,
+    created_at          TIMESTAMPTZ DEFAULT NOW()
+);
+
