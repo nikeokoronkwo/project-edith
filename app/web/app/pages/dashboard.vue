@@ -21,7 +21,7 @@
             <span class="hero-count">12 PENDING</span>
           </div>
           <div class="hero-body">
-            <div class="text-[#4b5563] text-[8.5px] tracking-widest text-center mt-6">
+            <div class="text-muted-foreground text-[8.5px] tracking-widest text-center mt-6 opacity-50">
               HERO REPORTS — PHASE 4.4
             </div>
           </div>
@@ -35,31 +35,69 @@
 import GlobeDisplay from '@/components/GlobeDisplay.vue'
 import PriorityEventList from '@/components/PriorityEventList.vue'
 import type { GlobeRegion } from '@/components/globe/types'
+import { lookupIso } from '@/shared/utils/locationMap'
+import { useReportsApi } from '@/composables/useExternalApi'
+import { useReportsStream } from '@/composables/useReportsStream'
 
 definePageMeta({ layout: 'default' })
 
-const mockRegions: GlobeRegion[] = [
-  {
-    id: 'USA', name: 'United States', countryCode: 'USA', severity: 'warning',
-    data: { sector: 'NORTH_AMERICA', resource: 'vibranium', depletion_pct: 67, forecast_days: 14, report_count: 8 },
-  },
-  {
-    id: 'RUS', name: 'Russia', countryCode: 'RUS', severity: 'critical',
-    data: { sector: 'EURASIA', resource: 'energy_cells', depletion_pct: 91, forecast_days: 3, report_count: 22 },
-  },
-  {
-    id: 'GBR', name: 'United Kingdom', countryCode: 'GBR', severity: 'elevated',
-    data: { sector: 'EUROPE', resource: 'medical', depletion_pct: 45, forecast_days: 30, report_count: 5 },
-  },
-  {
-    id: 'IND', name: 'India', countryCode: 'IND', severity: 'normal',
-    data: { sector: 'SOUTH_ASIA', resource: 'arc_fuel', depletion_pct: 22, forecast_days: 90, report_count: 2 },
-  },
-  {
-    id: 'NGA', name: 'Nigeria', countryCode: 'NGA', severity: 'critical',
-    data: { sector: 'WEST_AFRICA', resource: 'vibranium', depletion_pct: 88, forecast_days: 5, report_count: 17 },
-  },
-]
+// severity ranking helpers
+const severityRank: Record<string, number> = { critical: 4, warning: 3, elevated: 2, normal: 1 }
+const rankToSeverity = (avg: number): GlobeRegion['severity'] => {
+  if (avg >= 3.5) return 'critical'
+  if (avg >= 2.5) return 'warning'
+  if (avg >= 1.5) return 'elevated'
+  return 'normal'
+}
+
+// holds the region data for the globe
+const mockRegions: GlobeRegion[] = []
+
+// fetch reports and aggregate severity by iso code
+async function loadRegions() {
+  try {
+    const reportsApi = useReportsApi()
+    const resp = await reportsApi.getReports(100, 0)
+    const severityMap: Record<string, { total: number; count: number }> = {}
+
+    resp.reports.forEach((r: any) => {
+      (r.affectedLocations || []).forEach((loc: string) => {
+        const iso = lookupIso(loc) || loc.toUpperCase().slice(0,3)
+        const sev = r.severity || 'normal'
+        const rank = severityRank[sev] || 1
+        if (!severityMap[iso]) severityMap[iso] = { total: 0, count: 0 }
+        severityMap[iso].total += rank
+        severityMap[iso].count += 1
+      })
+    })
+
+    mockRegions.length = 0
+    const nameLookup = new Intl.DisplayNames(['en'], { type: 'region' })
+    for (const [iso, { total, count }] of Object.entries(severityMap)) {
+      const avg = total / count
+      mockRegions.push({
+        id: iso,
+        name: nameLookup.of(iso) || iso,
+        countryCode: iso,
+        severity: rankToSeverity(avg),
+        data: {
+          report_count: count,
+          severityAvg: avg
+        }
+      })
+    }
+  } catch (e) {
+    console.error('Failed to load report regions', e)
+  }
+}
+
+// also refresh when new reports arrive via SSE
+const reportsStream = useReportsStream({ maxReports: 200, autoConnect: true })
+watch(reportsStream.reports, () => {
+  loadRegions()
+}, { deep: true })
+
+loadRegions()
 </script>
 
 <style scoped>
@@ -105,9 +143,9 @@ const mockRegions: GlobeRegion[] = [
 .hero-panel {
   flex: 1;
   min-height: 0;
-  background: #080a0e;
-  border: 1px solid rgba(0, 128, 230, 0.18);
-  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -118,8 +156,8 @@ const mockRegions: GlobeRegion[] = [
   align-items: center;
   justify-content: space-between;
   padding: 9px 14px;
-  background: rgba(0, 128, 230, 0.05);
-  border-bottom: 1px solid rgba(0, 128, 230, 0.12);
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
@@ -127,13 +165,13 @@ const mockRegions: GlobeRegion[] = [
   font-size: 8.5px;
   letter-spacing: 0.18em;
   font-weight: 700;
-  color: #00d4ff;
+  color: var(--primary);
 }
 
 .hero-count {
   font-size: 7.5px;
   letter-spacing: 0.1em;
-  color: #5a6a7a;
+  color: var(--muted-foreground);
 }
 
 .hero-body {

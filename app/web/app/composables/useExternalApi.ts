@@ -1,5 +1,4 @@
 import type { Event } from '#shared/types';
-import { createExternalApiClient, type ApiClientOptions } from '#shared/api-client';
 
 export function useExternalApi(options: ApiClientOptions = {}) {
   const config = useRuntimeConfig();

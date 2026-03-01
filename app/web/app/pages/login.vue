@@ -1,28 +1,28 @@
 <template>
-  <div class="min-h-screen bg-[#0a1929] flex items-center justify-center p-4">
+  <div class="min-h-screen bg-background flex items-center justify-center p-4">
     <div class="w-full max-w-md">
       <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#1e3a5f] mb-4">
-          <Icon name="heroicons:shield-check" class="w-10 h-10 text-white" />
+        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-secondary mb-4">
+          <Icon name="heroicons:shield-check" class="w-10 h-10 text-primary" />
         </div>
-        <h1 class="text-3xl font-bold text-white mb-2">SENTINEL</h1>
-        <p class="text-slate-400">SHIELD Economic Analysis System</p>
+        <h1 class="text-3xl font-bold text-foreground mb-2">SENTINEL</h1>
+        <p class="text-muted-foreground text-sm">SHIELD Economic Analysis System</p>
       </div>
-      
-      <div class="bg-[#0d2137] border border-slate-700 p-8 rounded-lg">
-        <h2 class="text-xl font-semibold text-white mb-6">Agent Authentication</h2>
-        
+
+      <div class="bg-card border border-border p-8 rounded-lg">
+        <h2 class="text-xl font-semibold text-foreground mb-6">Agent Authentication</h2>
+
         <form @submit="onSubmit" class="space-y-4">
           <FormField name="email" v-slot="{ field }">
             <FormItem>
-              <FormLabel class="text-slate-300">Agent Email</FormLabel>
+              <FormLabel class="text-foreground text-sm">Agent Email</FormLabel>
               <FormControl>
                 <Input
                   v-bind="field"
                   type="email"
                   placeholder="agent@shield.gov"
                   :disabled="loading"
-                  class="bg-[#0a1929] border-slate-600 text-white placeholder:text-slate-500 focus:border-white focus:ring-white"
+                  class="bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
                 />
               </FormControl>
               <FormMessage />
@@ -31,33 +31,33 @@
 
           <FormField name="password" v-slot="{ field }">
             <FormItem>
-              <FormLabel class="text-slate-300">Password</FormLabel>
+              <FormLabel class="text-foreground text-sm">Password</FormLabel>
               <FormControl>
                 <Input
                   v-bind="field"
                   type="password"
                   placeholder="••••••••"
                   :disabled="loading"
-                  class="bg-[#0a1929] border-slate-600 text-white placeholder:text-slate-500 focus:border-white focus:ring-white"
+                  class="bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
                 />
               </FormControl>
               <FormMessage />
             </FormItem>
           </FormField>
 
-          <Button 
-            type="submit" 
-            class="w-full bg-white text-[#0a1929] hover:bg-slate-200" 
+          <Button
+            type="submit"
+            class="w-full bg-primary text-primary-foreground hover:bg-primary/90"
             :disabled="loading"
           >
             <Icon v-if="loading" name="svg-spinners:ring-resize" class="w-4 h-4 mr-2" />
             {{ loading ? 'Authenticating...' : 'Access Sentinel' }}
           </Button>
-        </Form>
+        </form>
       </div>
-      
-      <p class="text-center text-slate-500 text-sm mt-6">
-        🔒 Classified Access Level Required
+
+      <p class="text-center text-muted-foreground text-sm mt-6">
+        Classified Access Level Required
       </p>
     </div>
   </div>
@@ -108,13 +108,13 @@ const onSubmit = form.handleSubmit(handleSubmit)
 
 async function handleSubmit(values: { email: string; password: string }) {
   loading.value = true
-  
+
   try {
     const { error } = await authClient.signIn.email({
       email: values.email,
       password: values.password
     })
-    
+
     if (error) {
       toast(error.message || 'Authentication failed')
     }

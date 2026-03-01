@@ -110,6 +110,26 @@ export default defineEventHandler(async (event: H3Event) => {
       }
     );
 
+    // fire-and-forget publish into RabbitMQ so clients listening on the "reports" stream
+    try {
+      const { getRabbitMQChannel, RABBITMQ_EXCHANGE, setupReportsQueue } = await import('~~/server/utils/rabbitmq');
+      const ch = await getRabbitMQChannel();
+      // make sure the reports queue is asserted/bound so messages aren't dropped
+      await setupReportsQueue();
+      const msg = {
+        id: response.reportId || reportId,
+        heroAlias,
+        description,
+        timeStarted: timeStarted || timestamp,
+        affectedLocations,
+        severity: 'normal' as const // default, backend could compute
+      };
+      ch.publish(RABBITMQ_EXCHANGE, '', Buffer.from(JSON.stringify(msg)));
+    } catch (pubErr) {
+      // log but don't block
+      console.warn('[reports/new] failed to publish rabbitmq message', pubErr);
+    }
+
     return {
       success: true,
       reportId: response.reportId || reportId,

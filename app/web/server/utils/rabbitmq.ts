@@ -6,6 +6,7 @@ let channel: Channel | null = null;
 export const RABBITMQ_EXCHANGE = 'shield_events';
 export const RABBITMQ_QUEUE_EVENTS = 'events_stream';
 export const RABBITMQ_QUEUE_ANALYTICS = 'analytics_stream';
+export const RABBITMQ_QUEUE_REPORTS = 'reports_stream';
 
 export async function getRabbitMQConnection(): Promise<ChannelModel> {
   if (connection) return connection;
@@ -63,6 +64,19 @@ export async function setupAnalyticsQueue(): Promise<Channel> {
   });
   
   await ch.bindQueue(RABBITMQ_QUEUE_ANALYTICS, RABBITMQ_EXCHANGE, '');
+  
+  return ch;
+}
+
+export async function setupReportsQueue(): Promise<Channel> {
+  const ch = await getRabbitMQChannel();
+  
+  await ch.assertQueue(RABBITMQ_QUEUE_REPORTS, {
+    durable: true,
+    arguments: { 'x-message-ttl': 86400000 }
+  });
+  
+  await ch.bindQueue(RABBITMQ_QUEUE_REPORTS, RABBITMQ_EXCHANGE, '');
   
   return ch;
 }

@@ -1,11 +1,11 @@
 <template>
   <div class="flex items-center gap-3">
-    <div class="w-10 h-10 rounded-full bg-[#1e3a5f] flex items-center justify-center">
-      <Icon name="heroicons:user" class="w-5 h-5 text-white" />
+    <div class="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+      <Icon name="heroicons:user" class="w-5 h-5 text-secondary-foreground" />
     </div>
     <div>
-      <h2 class="text-lg font-semibold text-white">Welcome back, {{ userName }}</h2>
-      <p class="text-sm text-slate-400">SHIELD Economic Analysis System</p>
+      <h2 class="text-lg font-semibold text-foreground">Welcome back, {{ userName }}</h2>
+      <p class="text-sm text-muted-foreground">SHIELD Economic Analysis System</p>
     </div>
   </div>
 </template>

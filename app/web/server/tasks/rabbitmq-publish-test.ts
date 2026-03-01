@@ -52,6 +52,22 @@ export default defineTask({
         channel.publish(RABBITMQ_EXCHANGE, '', Buffer.from(JSON.stringify(data)));
       }
 
+      // also publish a few sample reports so the reports stream can be tested
+      const reports = [];
+      const severities = ['critical','warning','elevated','normal'];
+      for (let i = 0; i < 3; i++) {
+        const rpt = {
+          id: `test-report-${Date.now()}-${i}`,
+          heroAlias: `Test Hero ${i + 1}`,
+          description: `This is a test report number ${i + 1}`,
+          timeStarted: new Date().toISOString(),
+          affectedLocations: ['Avengers Compound'],
+          severity: severities[Math.floor(Math.random() * severities.length)]
+        };
+        reports.push(rpt);
+        channel.publish(RABBITMQ_EXCHANGE, '', Buffer.from(JSON.stringify(rpt)));
+      }
+
       console.log(`[rabbitmq:publish-test] Published ${events.length} events and ${analytics.length} analytics messages`);
 
       await channel.close();

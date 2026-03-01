@@ -1,19 +1,16 @@
 <template>
   <Sidebar class="shield-sidebar">
-    <!-- Scanline overlay -->
-    <div class="scanlines" aria-hidden="true" />
-
     <SidebarHeader class="sidebar-header">
       <SidebarMenu>
         <SidebarMenuItem>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2.5">
             <div class="shield-logo-wrap">
               <svg class="shield-logo" viewBox="0 0 48 48" fill="none">
-                <polygon points="24,2 44,12 44,30 24,46 4,30 4,12" fill="#0d1117" stroke="#C9A234" stroke-width="1.5"/>
-                <polygon points="24,7 39,15 39,29 24,41 9,29 9,15" fill="#0d1117" stroke="#C9A234" stroke-width="0.75" opacity="0.5"/>
-                <circle cx="24" cy="24" r="7" fill="none" stroke="#C9A234" stroke-width="1.5"/>
-                <line x1="24" y1="10" x2="24" y2="38" stroke="#C9A234" stroke-width="1" opacity="0.6"/>
-                <line x1="10" y1="24" x2="38" y2="24" stroke="#C9A234" stroke-width="1" opacity="0.6"/>
+                <polygon points="24,2 44,12 44,30 24,46 4,30 4,12" fill="transparent" stroke="currentColor" stroke-width="1.5"/>
+                <polygon points="24,7 39,15 39,29 24,41 9,29 9,15" fill="transparent" stroke="currentColor" stroke-width="0.75" opacity="0.4"/>
+                <circle cx="24" cy="24" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <line x1="24" y1="10" x2="24" y2="38" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+                <line x1="10" y1="24" x2="38" y2="24" stroke="currentColor" stroke-width="1" opacity="0.5"/>
               </svg>
             </div>
             <div class="header-text" v-if="!isCollapsed">
@@ -27,7 +24,7 @@
 
     <!-- Status bar -->
     <div v-if="!isCollapsed" class="status-bar">
-      <span class="status-dot" />
+      <span class="status-dot status-dot-blink" />
       <span class="status-text">UPLINK ACTIVE</span>
       <span class="status-ping">{{ currentTime }}</span>
     </div>
@@ -75,13 +72,11 @@
     </SidebarContent>
 
     <SidebarFooter class="sidebar-footer">
-      <!-- Agent Card -->
       <div v-if="!isCollapsed" class="agent-card">
         <div class="agent-avatar">
           <span>{{ agentInitials }}</span>
-          <span class="avatar-ring" />
         </div>
-<div class="agent-info">
+        <div class="agent-info">
           <span class="agent-name">{{ userName }}</span>
           <span class="agent-clearance">CLEARANCE: <em>LEVEL 8</em></span>
         </div>
@@ -143,7 +138,7 @@ const agentInitials = computed(() => {
 const mainItems = [
   { title: 'Dashboard', url: '/dashboard', icon: 'heroicons:home', tag: null, badge: null },
   { title: 'Analytics', url: '/analytics', icon: 'heroicons:chart-bar', tag: 'LIVE', badge: null },
-  { title: 'Reports', url: '/reports/new', icon: 'heroicons:document-text', tag: null, badge: '12' },
+  { title: 'Reports', url: '/reports', icon: 'heroicons:document-text', tag: null, badge: '12' },
 ]
 
 function isActive(url: string) {
@@ -179,46 +174,14 @@ async function handleSignOut() {
 
 <style scoped>
 .shield-sidebar {
-  --gold: #0080e6;
-  --gold-dim: #0064b3;
-  --cyan: #00d4ff;
-  --bg: #080a0e;
-  --bg-surface: #0d1117;
-  --bg-hover: #141923;
-  --border: rgba(0, 128, 230, 0.15);
-  --text-primary: #e8f0f8;
-  --text-muted: #5a6a7a;
-  
-  background: var(--bg);
-  border-right: 1px solid var(--border);
+  background: var(--sidebar);
+  border-right: 1px solid var(--sidebar-border);
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
-.scanlines {
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0px,
-    transparent 3px,
-    rgba(0, 0, 0, 0.08) 3px,
-    rgba(0, 0, 0, 0.08) 4px
-  );
-  pointer-events: none;
-  z-index: 0;
-}
-
-.sidebar-header,
-.status-bar,
-.nav-group,
-.sidebar-footer {
-  position: relative;
-  z-index: 1;
-}
-
 .sidebar-header {
-  padding: 20px 14px 16px;
-  border-bottom: 1px solid var(--border);
+  padding: 18px 14px 14px;
+  border-bottom: 1px solid var(--sidebar-border);
 }
 
 .shield-logo-wrap {
@@ -229,15 +192,9 @@ async function handleSignOut() {
 }
 
 .shield-logo {
-  width: 32px;
-  height: 32px;
-  filter: drop-shadow(0 0 6px rgba(0, 212, 255, 0.45));
-  animation: pulse-glow 3s ease-in-out infinite;
-}
-
-@keyframes pulse-glow {
-  0%, 100% { filter: drop-shadow(0 0 5px rgba(0, 212, 255, 0.4)); }
-  50% { filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.75)); }
+  width: 28px;
+  height: 28px;
+  color: var(--sidebar-primary);
 }
 
 .header-text {
@@ -252,13 +209,13 @@ async function handleSignOut() {
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.14em;
-  color: var(--cyan);
+  color: var(--sidebar-primary);
 }
 
 .sys-label {
   font-size: 9px;
   letter-spacing: 0.1em;
-  color: var(--text-muted);
+  color: var(--muted-foreground);
 }
 
 /* Status Bar */
@@ -266,43 +223,43 @@ async function handleSignOut() {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 7px 16px;
-  background: rgba(0, 212, 255, 0.04);
-  border-bottom: 1px solid var(--border);
+  padding: 6px 16px;
+  background: color-mix(in srgb, var(--sidebar-primary) 5%, transparent);
+  border-bottom: 1px solid var(--sidebar-border);
 }
 
 .status-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #22c55e;
-  box-shadow: 0 0 6px #22c55e;
+  background: var(--color-status-online);
+  box-shadow: 0 0 5px var(--color-status-online);
   animation: blink 2s step-end infinite;
 }
 
 @keyframes blink {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+  50% { opacity: 0.25; }
 }
 
 .status-text {
   font-size: 9px;
   letter-spacing: 0.12em;
-  color: #22c55e;
+  color: var(--color-status-online);
   flex: 1;
 }
 
 .status-ping {
   font-size: 9px;
-  color: var(--text-muted);
+  color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
 }
 
-/* Divider */
+/* Section dividers */
 .divider-label {
   font-size: 8.5px;
   letter-spacing: 0.15em;
-  color: var(--text-muted);
+  color: var(--muted-foreground);
   padding: 12px 14px 6px;
 }
 
@@ -325,38 +282,25 @@ async function handleSignOut() {
   gap: 10px;
   padding: 9px 10px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--text-muted);
+  color: var(--muted-foreground);
   cursor: pointer;
   text-align: left;
   width: 100%;
-  transition: all 0.15s;
+  transition: background 0.15s, color 0.15s;
   overflow: hidden;
 }
 
-.nav-item::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, rgba(0, 212, 255, 0.07) 0%, transparent 100%);
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
 .nav-item:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: var(--sidebar-accent);
+  color: var(--sidebar-foreground);
 }
-
-.nav-item:hover::before { opacity: 1; }
 
 .nav-item.active {
-  color: var(--cyan);
-  background: rgba(0, 212, 255, 0.08);
+  color: var(--sidebar-primary);
+  background: color-mix(in srgb, var(--sidebar-primary) 10%, transparent);
 }
-
-.nav-item.active::before { opacity: 1; }
 
 .nav-icon-wrap {
   position: relative;
@@ -365,18 +309,16 @@ async function handleSignOut() {
 }
 
 .nav-icon {
+  width: 16px;
+  height: 16px;
   transition: color 0.15s;
-}
-
-.nav-item.active .nav-icon {
-  filter: drop-shadow(0 0 4px rgba(0, 212, 255, 0.6));
 }
 
 .nav-badge {
   position: absolute;
   top: -5px;
   right: -6px;
-  background: #c0392b;
+  background: var(--destructive);
   color: #fff;
   font-size: 8px;
   font-weight: 700;
@@ -404,8 +346,8 @@ async function handleSignOut() {
 }
 
 .nav-item.active .nav-tag {
-  border-color: var(--cyan);
-  color: var(--cyan);
+  border-color: var(--sidebar-primary);
+  color: var(--sidebar-primary);
   opacity: 0.8;
 }
 
@@ -415,14 +357,14 @@ async function handleSignOut() {
   top: 20%;
   bottom: 20%;
   width: 2px;
-  background: var(--cyan);
+  background: var(--sidebar-primary);
   border-radius: 0 2px 2px 0;
-  box-shadow: 0 0 8px var(--cyan);
 }
 
 /* Footer */
 .sidebar-footer {
   padding: 8px;
+  border-top: 1px solid var(--sidebar-border);
 }
 
 .agent-card {
@@ -431,47 +373,24 @@ async function handleSignOut() {
   align-items: center;
   gap: 10px;
   padding: 10px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  position: relative;
-  overflow: hidden;
-}
-
-.agent-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(0, 212, 255, 0.05) 0%, transparent 60%);
-  pointer-events: none;
+  background: var(--sidebar-accent);
+  border: 1px solid var(--sidebar-border);
+  border-radius: var(--radius-sm);
 }
 
 .agent-avatar {
-  position: relative;
   flex-shrink: 0;
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #1a1a2e, #16213e);
-  border: 1px solid var(--gold-dim);
+  background: color-mix(in srgb, var(--sidebar-primary) 15%, transparent);
+  border: 1px solid var(--sidebar-primary);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 9px;
   font-weight: 700;
-  color: var(--cyan);
-}
-
-.avatar-ring {
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  border: 1px dashed rgba(0, 212, 255, 0.3);
-  animation: spin 12s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
+  color: var(--sidebar-primary);
 }
 
 .agent-info {
@@ -486,26 +405,26 @@ async function handleSignOut() {
   font-size: 9.5px;
   font-weight: 700;
   letter-spacing: 0.1em;
-  color: var(--text-primary);
+  color: var(--sidebar-foreground);
 }
 
 .agent-clearance {
   font-size: 8px;
-  color: var(--text-muted);
+  color: var(--muted-foreground);
   letter-spacing: 0.08em;
 }
 
 .agent-clearance em {
   font-style: normal;
-  color: var(--cyan);
+  color: var(--sidebar-primary);
 }
 
 .agent-status-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #22c55e;
-  box-shadow: 0 0 5px #22c55e;
+  background: var(--color-status-online);
+  box-shadow: 0 0 5px var(--color-status-online);
   flex-shrink: 0;
 }
 </style>

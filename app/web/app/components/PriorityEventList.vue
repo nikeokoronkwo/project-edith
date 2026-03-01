@@ -5,7 +5,7 @@
       <div class="header-left">
         <span class="panel-label">PRIORITY EVENT REPORTS</span>
         <span class="live-dot" :class="{ streaming: isStreaming }" />
-        <span class="live-text">{{ isStreaming ? 'LIVE' : 'STANDBY' }}</span>
+        <span class="live-text" :class="{ streaming: isStreaming }">{{ isStreaming ? 'LIVE' : 'STANDBY' }}</span>
       </div>
       <span class="event-count">{{ sortedEvents.length }} ACTIVE</span>
     </div>
@@ -24,7 +24,7 @@
       </button>
     </div>
 
-    <!-- Event list: 3 rows visible, rest scrollable -->
+    <!-- Event list -->
     <div class="event-list-wrap">
       <div class="event-list" ref="listRef">
         <TransitionGroup name="event-slide">
@@ -36,12 +36,9 @@
             :style="{ '--accent': priorityColor(ev.priority) }"
             @click="toggleExpand(ev.id)"
           >
-            <!-- Left accent bar -->
             <div class="accent-bar" />
 
-            <!-- Card body -->
             <div class="card-body">
-              <!-- Always visible: badge + title + time -->
               <div class="card-row">
                 <span
                   class="priority-badge"
@@ -52,7 +49,6 @@
                 <span class="event-time">{{ timeAgo(ev.started) }}</span>
               </div>
 
-              <!-- Expanded section -->
               <Transition name="expand">
                 <div v-if="expandedId === ev.id" class="expanded-body">
                   <p v-if="ev.summary" class="event-summary">{{ ev.summary }}</p>
@@ -82,7 +78,6 @@
               </Transition>
             </div>
 
-            <!-- Expand chevron -->
             <Icon
               name="heroicons:chevron-right"
               class="card-chevron"
@@ -97,7 +92,6 @@
         </div>
       </div>
 
-      <!-- Fade hint for more content below -->
       <div class="scroll-fade" aria-hidden="true" />
     </div>
 
@@ -126,14 +120,14 @@ const PRIORITY_COLORS: Record<number, string> = {
   1: '#ef4444',
   2: '#f97316',
   3: '#eab308',
-  4: '#00d4ff',
+  4: '#3b82f6',
 }
 
 const PRIORITY_BADGE_BG: Record<number, string> = {
-  1: 'rgba(239,68,68,0.15)',
-  2: 'rgba(249,115,22,0.15)',
-  3: 'rgba(234,179,8,0.15)',
-  4: 'rgba(0,212,255,0.10)',
+  1: 'rgba(239,68,68,0.12)',
+  2: 'rgba(249,115,22,0.12)',
+  3: 'rgba(234,179,8,0.12)',
+  4: 'rgba(59,130,246,0.12)',
 }
 
 const PRIORITY_LABELS: Record<number, string> = {
@@ -144,21 +138,21 @@ const PRIORITY_LABELS: Record<number, string> = {
 }
 
 const FILTERS = [
-  { key: 'all', label: 'ALL',      color: '#e8f0f8' },
+  { key: 'all', label: 'ALL',      color: 'var(--foreground)' },
   { key: '1',   label: 'CRITICAL', color: '#ef4444' },
   { key: '2',   label: 'HIGH',     color: '#f97316' },
   { key: '3',   label: 'MEDIUM',   color: '#eab308' },
-  { key: '4',   label: 'LOW',      color: '#00d4ff' },
+  { key: '4',   label: 'LOW',      color: '#3b82f6' },
 ]
 
 const NEW_BADGE_TTL = 8000
 
-const listRef       = ref<HTMLElement | null>(null)
-const activeFilter  = ref<string>('all')
-const expandedId    = ref<string | null>(null)
-const events        = ref<PriorityEvent[]>([])
-const newEventIds   = ref<Set<string>>(new Set())
-const isStreaming   = ref(false)
+const listRef      = ref<HTMLElement | null>(null)
+const activeFilter = ref<string>('all')
+const expandedId   = ref<string | null>(null)
+const events       = ref<PriorityEvent[]>([])
+const newEventIds  = ref<Set<string>>(new Set())
+const isStreaming  = ref(false)
 
 const { data: initialData } = await useFetch('/api/events')
 if (initialData.value?.events) {
@@ -177,9 +171,9 @@ const filteredEvents = computed(() => {
   return sortedEvents.value.filter(e => String(e.priority) === activeFilter.value)
 })
 
-function priorityColor(p: number)    { return PRIORITY_COLORS[p] ?? '#e8f0f8' }
-function priorityBadgeBg(p: number)  { return PRIORITY_BADGE_BG[p] ?? 'rgba(255,255,255,0.05)' }
-function priorityLabel(p: number)    { return PRIORITY_LABELS[p] ?? 'UNKNOWN' }
+function priorityColor(p: number)   { return PRIORITY_COLORS[p] ?? 'var(--foreground)' }
+function priorityBadgeBg(p: number) { return PRIORITY_BADGE_BG[p] ?? 'rgba(255,255,255,0.05)' }
+function priorityLabel(p: number)   { return PRIORITY_LABELS[p] ?? 'UNKNOWN' }
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -229,25 +223,25 @@ onUnmounted(() => { sse?.close() })
 </script>
 
 <style scoped>
-/* ── Panel shell ─────────────────────────────────────────────────────────── */
+/* ── Panel shell ──────────────────────────────────────────────────────────── */
 .event-panel {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #080a0e;
-  border: 1px solid rgba(0, 128, 230, 0.18);
-  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   overflow: hidden;
 }
 
-/* ── Header ──────────────────────────────────────────────────────────────── */
+/* ── Header ───────────────────────────────────────────────────────────────── */
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 9px 14px;
-  background: rgba(0, 128, 230, 0.05);
-  border-bottom: 1px solid rgba(0, 128, 230, 0.12);
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
@@ -261,21 +255,21 @@ onUnmounted(() => { sse?.close() })
   font-size: 8.5px;
   letter-spacing: 0.18em;
   font-weight: 700;
-  color: #00d4ff;
+  color: var(--primary);
 }
 
 .live-dot {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #374151;
+  background: var(--muted-foreground);
   flex-shrink: 0;
   transition: background 0.3s;
 }
 
 .live-dot.streaming {
-  background: #22c55e;
-  box-shadow: 0 0 5px #22c55e;
+  background: var(--color-status-online);
+  box-shadow: 0 0 5px var(--color-status-online);
   animation: blink 2s step-end infinite;
 }
 
@@ -287,25 +281,25 @@ onUnmounted(() => { sse?.close() })
 .live-text {
   font-size: 7.5px;
   letter-spacing: 0.1em;
-  color: #374151;
+  color: var(--muted-foreground);
   transition: color 0.3s;
 }
 
-.live-dot.streaming + .live-text { color: #22c55e; }
+.live-text.streaming { color: var(--color-status-online); }
 
 .event-count {
   font-size: 7.5px;
   letter-spacing: 0.1em;
-  color: #5a6a7a;
+  color: var(--muted-foreground);
 }
 
-/* ── Filter bar ──────────────────────────────────────────────────────────── */
+/* ── Filter bar ───────────────────────────────────────────────────────────── */
 .filter-bar {
   display: flex;
   gap: 4px;
   padding: 6px 10px;
-  border-bottom: 1px solid rgba(0, 128, 230, 0.08);
-  background: rgba(0, 0, 0, 0.18);
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 50%, transparent);
   flex-shrink: 0;
 }
 
@@ -315,21 +309,26 @@ onUnmounted(() => { sse?.close() })
   font-weight: 600;
   padding: 2px 7px;
   border-radius: 2px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--border);
   background: transparent;
-  color: #4b5563;
+  color: var(--muted-foreground);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
   white-space: nowrap;
 }
 
-.filter-btn:hover  { color: #e8f0f8; border-color: rgba(255,255,255,0.2); }
-.filter-btn.active { background: rgba(255,255,255,0.04); }
+.filter-btn:hover {
+  color: var(--foreground);
+  border-color: color-mix(in srgb, var(--foreground) 30%, transparent);
+}
 
-/* ── List wrapper ────────────────────────────────────────────────────────── */
+.filter-btn.active {
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+
+/* ── List wrapper ─────────────────────────────────────────────────────────── */
 .event-list-wrap {
   position: relative;
-  /* Compact: show exactly 3 collapsed rows (~48px each) + gaps + padding */
   max-height: 182px;
   overflow: hidden;
   flex-shrink: 0;
@@ -341,12 +340,12 @@ onUnmounted(() => { sse?.close() })
   left: 0;
   right: 0;
   height: 40px;
-  background: linear-gradient(to bottom, transparent, #080a0e 88%);
+  background: linear-gradient(to bottom, transparent, var(--card) 88%);
   pointer-events: none;
   z-index: 2;
 }
 
-/* ── Event list ──────────────────────────────────────────────────────────── */
+/* ── Event list ───────────────────────────────────────────────────────────── */
 .event-list {
   max-height: 182px;
   overflow-y: auto;
@@ -355,20 +354,20 @@ onUnmounted(() => { sse?.close() })
   flex-direction: column;
   gap: 4px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(0,128,230,0.18) transparent;
+  scrollbar-color: var(--border) transparent;
 }
 
 .event-list::-webkit-scrollbar       { width: 2px; }
 .event-list::-webkit-scrollbar-track { background: transparent; }
-.event-list::-webkit-scrollbar-thumb { background: rgba(0,128,230,0.22); border-radius: 2px; }
+.event-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-/* ── Event card ──────────────────────────────────────────────────────────── */
+/* ── Event card ───────────────────────────────────────────────────────────── */
 .event-card {
   display: flex;
   align-items: flex-start;
-  background: #0c0f14;
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 5px;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
   overflow: hidden;
@@ -376,20 +375,20 @@ onUnmounted(() => { sse?.close() })
 }
 
 .event-card:hover {
-  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
-  background: #0f131a;
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+  background: var(--accent);
 }
 
 .event-card.is-open {
-  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
-  background: #0f131a;
+  border-color: color-mix(in srgb, var(--accent) 80%, var(--border));
+  background: var(--accent);
 }
 
 .event-card.is-new { animation: flash-in 0.4s ease-out; }
 
 @keyframes flash-in {
-  0%   { background: rgba(255,255,255,0.07); }
-  100% { background: #0c0f14; }
+  0%   { background: color-mix(in srgb, var(--primary) 12%, transparent); }
+  100% { background: var(--background); }
 }
 
 /* Accent bar */
@@ -398,10 +397,8 @@ onUnmounted(() => { sse?.close() })
   flex-shrink: 0;
   align-self: stretch;
   background: var(--accent);
-  border-radius: 5px 0 0 5px;
+  border-radius: calc(var(--radius) - 2px) 0 0 calc(var(--radius) - 2px);
 }
-
-.event-card.priority-1 .accent-bar { box-shadow: 0 0 6px var(--accent); }
 
 /* Card body */
 .card-body {
@@ -413,7 +410,7 @@ onUnmounted(() => { sse?.close() })
   min-width: 0;
 }
 
-/* ── Collapsed row: badge + title + time ──────────────────────────────────── */
+/* ── Card row ─────────────────────────────────────────────────────────────── */
 .card-row {
   display: flex;
   align-items: center;
@@ -435,7 +432,7 @@ onUnmounted(() => { sse?.close() })
   font-size: 6.5px;
   letter-spacing: 0.1em;
   font-weight: 700;
-  color: #22c55e;
+  color: var(--color-status-online);
   flex-shrink: 0;
   animation: pulse-new 1s ease-in-out infinite alternate;
 }
@@ -449,7 +446,7 @@ onUnmounted(() => { sse?.close() })
   flex: 1;
   font-size: 10px;
   font-weight: 600;
-  color: #dde8f4;
+  color: var(--card-foreground);
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -458,28 +455,26 @@ onUnmounted(() => { sse?.close() })
   min-width: 0;
 }
 
-.event-card.priority-1 .event-title { color: #fff; }
-
 .event-time {
   font-size: 7px;
-  color: #374151;
+  color: var(--muted-foreground);
   flex-shrink: 0;
   letter-spacing: 0.06em;
 }
 
-/* ── Expanded section ────────────────────────────────────────────────────── */
+/* ── Expanded section ─────────────────────────────────────────────────────── */
 .expanded-body {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding-top: 7px;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  border-top: 1px solid var(--border);
   margin-top: 7px;
 }
 
 .event-summary {
   font-size: 8px;
-  color: #5a6a7a;
+  color: var(--muted-foreground);
   line-height: 1.5;
   margin: 0;
 }
@@ -501,8 +496,16 @@ onUnmounted(() => { sse?.close() })
   white-space: nowrap;
 }
 
-.tag-location { background: rgba(0,128,230,0.12); color: #4a9de0; }
-.tag-resource { background: rgba(201,162,52,0.10); color: #c9a234; text-transform: uppercase; }
+.tag-location {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+
+.tag-resource {
+  background: color-mix(in srgb, var(--muted-foreground) 15%, transparent);
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+}
 
 .tag-icon { width: 7px; height: 7px; }
 
@@ -513,32 +516,33 @@ onUnmounted(() => { sse?.close() })
   font-size: 7.5px;
   letter-spacing: 0.12em;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--primary);
   text-decoration: none;
-  opacity: 0.8;
+  opacity: 0.85;
   transition: opacity 0.15s;
   align-self: flex-start;
 }
 
-.view-link:hover  { opacity: 1; }
-.view-icon        { width: 10px; height: 10px; }
+.view-link:hover { opacity: 1; }
+.view-icon       { width: 10px; height: 10px; }
 
-/* ── Chevron ─────────────────────────────────────────────────────────────── */
+/* ── Chevron ──────────────────────────────────────────────────────────────── */
 .card-chevron {
   width: 12px;
   height: 12px;
-  color: #2d3748;
+  color: var(--muted-foreground);
   flex-shrink: 0;
   align-self: center;
   margin-right: 7px;
   margin-top: 7px;
   transition: color 0.15s, transform 0.2s;
+  opacity: 0.5;
 }
 
-.event-card:hover .card-chevron  { color: var(--accent); }
-.card-chevron.is-open            { transform: rotate(90deg); color: var(--accent); }
+.event-card:hover .card-chevron { opacity: 1; }
+.card-chevron.is-open           { transform: rotate(90deg); opacity: 1; }
 
-/* ── Empty state ─────────────────────────────────────────────────────────── */
+/* ── Empty state ──────────────────────────────────────────────────────────── */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -546,17 +550,17 @@ onUnmounted(() => { sse?.close() })
   justify-content: center;
   gap: 8px;
   padding: 24px 16px;
-  color: #2d3748;
+  color: var(--muted-foreground);
+  opacity: 0.5;
 }
 
-.empty-icon  { width: 26px; height: 26px; }
-.empty-text  { font-size: 8.5px; letter-spacing: 0.14em; margin: 0; }
+.empty-icon { width: 26px; height: 26px; }
+.empty-text { font-size: 8.5px; letter-spacing: 0.14em; margin: 0; }
 
-/* ── Footer ──────────────────────────────────────────────────────────────── */
+/* ── Footer ───────────────────────────────────────────────────────────────── */
 .panel-footer {
   padding: 8px 14px;
-  border-top: 1px solid rgba(0,128,230,0.1);
-  background: rgba(0,0,0,0.15);
+  border-top: 1px solid var(--border);
   flex-shrink: 0;
 }
 
@@ -568,16 +572,16 @@ onUnmounted(() => { sse?.close() })
   font-size: 8px;
   letter-spacing: 0.14em;
   font-weight: 700;
-  color: #4b5563;
+  color: var(--muted-foreground);
   text-decoration: none;
   transition: color 0.15s;
 }
 
-.view-all-link:hover            { color: #00d4ff; }
+.view-all-link:hover            { color: var(--primary); }
 .link-icon                      { width: 11px; height: 11px; transition: transform 0.15s; }
 .view-all-link:hover .link-icon { transform: translateX(3px); }
 
-/* ── Transitions ─────────────────────────────────────────────────────────── */
+/* ── Transitions ──────────────────────────────────────────────────────────── */
 .event-slide-enter-active { transition: all 0.25s ease-out; }
 .event-slide-enter-from   { opacity: 0; transform: translateY(-6px); }
 

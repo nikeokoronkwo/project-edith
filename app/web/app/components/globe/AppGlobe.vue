@@ -197,12 +197,41 @@ const SEVERITY_STROKE: Record<string, string> = {
 
 function polyFill(feat: GeoFeature) {
   const r = regionForFeature(feat)
-  return r ? SEVERITY_FILL[r.severity] ?? SEVERITY_FILL.normal : 'rgba(201, 162, 52, 0.04)'
+  if (!r) return 'rgba(201, 162, 52, 0.04)'
+  let base = SEVERITY_FILL[r.severity] ?? SEVERITY_FILL.normal
+  // if numeric average provided, scale alpha to give density effect
+  const avg = (r.data as any)?.severityAvg as number | undefined
+  if (avg != null) {
+    // avg ranges 1‑4; convert to 0..1
+    const t = Math.max(0, Math.min(1, (avg - 1) / 3))
+    // compute new alpha between original alpha and originalAlpha+0.2
+    const match = base.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([0-9\.]+)\)/)
+    if (match) {
+      const [_, r0, g0, b0, a0] = match
+      const a = parseFloat(a0)
+      const newA = Math.min(1, a + 0.3 * t)
+      base = `rgba(${r0}, ${g0}, ${b0}, ${newA})`
+    }
+  }
+  return base
 }
 
 function polyStroke(feat: GeoFeature) {
   const r = regionForFeature(feat)
-  return r ? SEVERITY_STROKE[r.severity] ?? SEVERITY_STROKE.normal : 'rgba(201, 162, 52, 0.15)'
+  if (!r) return 'rgba(201, 162, 52, 0.15)'
+  let base = SEVERITY_STROKE[r.severity] ?? SEVERITY_STROKE.normal
+  const avg = (r.data as any)?.severityAvg as number | undefined
+  if (avg != null) {
+    const t = Math.max(0, Math.min(1, (avg - 1) / 3))
+    const match = base.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([0-9\.]+)\)/)
+    if (match) {
+      const [_, r0, g0, b0, a0] = match
+      const a = parseFloat(a0)
+      const newA = Math.min(1, a + 0.3 * t)
+      base = `rgba(${r0}, ${g0}, ${b0}, ${newA})`
+    }
+  }
+  return base
 }
 
 function polyAltitude(feat: GeoFeature) {
@@ -401,6 +430,7 @@ onUnmounted(() => {
 .globe-canvas {
   width: 100%;
   height: 100%;
+  max-width: 80lvw;
 }
 
 /* Ensure globe.gl canvas fills container */

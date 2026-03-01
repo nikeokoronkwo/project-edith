@@ -15,6 +15,12 @@ export default defineNuxtConfig({
     'shadcn-nuxt',
   ],
 
+  colorMode: {
+    classSuffix: '',
+    preference: 'dark',
+    fallback: 'dark',
+  },
+
   fonts: {
     families: [
       { name: 'JetBrains Mono', provider: 'google', weights: [400, 500, 600, 700] },
@@ -27,8 +33,13 @@ export default defineNuxtConfig({
 
   nitro: {
     experimental: {
-      tasks: true
-    }
+      tasks: true,
+    },
+    scheduledTasks: {
+      // Publish analytics updates every minute for live chart testing.
+      // Manual trigger: POST /_nitro/tasks/run/analytics:ticker
+      '* * * * *': ['analytics:ticker'],
+    },
   },
   
   css: ['./app/assets/css/tailwind.css'],

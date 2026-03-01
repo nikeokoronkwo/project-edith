@@ -1,163 +1,135 @@
-export interface StreamAnalyticsData {
-  timestamp: number;
-  resource: string;
-  sector: string;
-  value?: number;
-  [key: string]: unknown;
-}
+/**
+ * useAnalyticsStream — global singleton analytics composable.
+ *
+ * Design goals:
+ *  - ONE REST call to /api/analytics (initial 48-h history) per page load.
+ *  - ONE SSE connection to /api/streams/analytics for the entire app lifetime.
+ *  - All pages / components share the same reactive `allSeries` state through
+ *    Nuxt's `useState` (survives client-side navigation).
+ *  - Filtering by sector or resource is done entirely on the client; the SSE
+ *    channel carries updates for all resource × sector combinations together
+ *    and callers subscribe to the slice they care about.
+ *
+ * Usage:
+ *   const { connected, seriesForSector, seriesForResource } = useAnalyticsStream()
+ *   const seriesList = seriesForSector(sectorId)   // reactive computed
+ */
 
-export interface AnalyticsDataPoint extends StreamAnalyticsData {
-  id: string;
-}
+import type { AnalyticsSeries, AnalyticsStreamMessage } from '~/utils/analyticsTypes'
 
-export interface UseAnalyticsStreamOptions {
-  maxDataPoints?: number;
-  autoConnect?: boolean;
-  resource?: string;
-  sector?: string;
-}
+// ── Module-level SSE handle (client-only, survives navigation) ────────────────
+let _sse:             EventSource | null                  = null
+let _reconnectTimer:  ReturnType<typeof setTimeout> | null = null
 
-export function useAnalyticsStream(options: UseAnalyticsStreamOptions = {}) {
-  const { 
-    maxDataPoints = 200, 
-    autoConnect = true,
-    resource,
-    sector 
-  } = options;
-  
-  const data = ref<AnalyticsDataPoint[]>([]);
-  const isConnected = ref(false);
-  const error = ref<Error | null>(null);
-  const isLoading = ref(false);
-  
-  let eventSource: EventSource | null = null;
+export function useAnalyticsStream() {
+  // ── Shared state (Nuxt useState = one instance per key across all callers) ──
+  const allSeries = useState<AnalyticsSeries[]>('analytics:series',    () => [])
+  const resources = useState<string[]>           ('analytics:resources', () => [])
+  const sectors   = useState<string[]>           ('analytics:sectors',   () => [])
+  const connected = useState<boolean>            ('analytics:connected', () => false)
+  const hydrated  = useState<boolean>            ('analytics:hydrated',  () => false)
 
-  function connect() {
-    if (eventSource) return;
-    
-    isLoading.value = true;
-    error.value = null;
-    
-    let url = '/api/streams/analytics';
-    const params = new URLSearchParams();
-    if (resource) params.set('resource', resource);
-    if (sector) params.set('sector', sector);
-    if (params.toString()) url += `?${params.toString()}`;
-    
-    eventSource = new EventSource(url);
-    
-    eventSource.onopen = () => {
-      isConnected.value = true;
-      isLoading.value = false;
-    };
-    
-    eventSource.onmessage = (event) => {
-      try {
-        const rawData = JSON.parse(event.data) as StreamAnalyticsData;
-        
-        if (resource && rawData.resource !== resource) return;
-        if (sector && rawData.sector !== sector) return;
-        
-        const dataPoint: AnalyticsDataPoint = {
-          ...rawData,
-          id: `${rawData.timestamp}-${Math.random().toString(36).slice(2, 9)}`
-        };
-        
-        data.value = [...data.value, dataPoint].slice(-maxDataPoints);
-      } catch (e) {
-        console.error('[Analytics Stream] Failed to parse message:', e);
-      }
-    };
-    
-    eventSource.onerror = (e) => {
-      error.value = new Error('Connection lost');
-      isConnected.value = false;
-      isLoading.value = false;
-      disconnect();
-      setTimeout(connect, 5000);
-    };
-  }
-  
-  function disconnect() {
-    if (eventSource) {
-      eventSource.close();
-      eventSource = null;
+  // ── REST hydration ──────────────────────────────────────────────────────────
+  // Safe to call multiple times — the guard prevents duplicate fetches.
+  async function hydrate() {
+    if (hydrated.value) return
+    hydrated.value = true           // set early to prevent concurrent calls
+    try {
+      const data = await $fetch<{
+        series:    AnalyticsSeries[]
+        resources: string[]
+        sectors:   string[]
+      }>('/api/analytics')
+      allSeries.value = data.series
+      resources.value = data.resources
+      sectors.value   = data.sectors
+    } catch (err) {
+      console.error('[Analytics] Hydration failed:', err)
+      hydrated.value = false          // allow retry on next call
     }
-    isConnected.value = false;
   }
-  
-  function clear() {
-    data.value = [];
+
+  // ── SSE connection (client-only singleton) ───────────────────────────────────
+  function connect() {
+    if (import.meta.server) return
+    if (_sse) return                  // already connected
+
+    _sse = new EventSource('/api/streams/analytics')
+
+    _sse.addEventListener('open', () => {
+      connected.value = true
+      console.log('[Analytics] SSE connected')
+    })
+
+    _sse.addEventListener('error', () => {
+      connected.value = false
+      _sse?.close()
+      _sse = null
+      // Reconnect after 5 s
+      if (_reconnectTimer) clearTimeout(_reconnectTimer)
+      _reconnectTimer = setTimeout(connect, 5_000)
+    })
+
+    _sse.addEventListener('message', (ev) => {
+      try {
+        const msg: AnalyticsStreamMessage = JSON.parse(ev.data)
+
+        // Ignore messages that don't carry the analytics shape
+        if (!msg.resource || !msg.sector || msg.value === undefined) return
+
+        const sid    = `${msg.resource}::${msg.sector}`
+        const series = allSeries.value.find(s => s.id === sid)
+        if (!series) return
+
+        series.data.push({ timestamp: msg.timestamp, value: msg.value })
+
+        // Merge in any updated forecast metadata
+        if (msg.forecast) {
+          series.forecast = { ...series.forecast, ...msg.forecast }
+        }
+      } catch {}
+    })
   }
-  
-  function getDataByResource(resourceName: string) {
-    return computed(() => 
-      data.value.filter(d => d.resource === resourceName)
-    );
+
+  function disconnect() {
+    if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null }
+    _sse?.close()
+    _sse = null
+    connected.value = false
   }
-  
-  function getDataBySector(sectorName: string) {
-    return computed(() => 
-      data.value.filter(d => d.sector === sectorName)
-    );
-  }
-  
-  function getLatestByResource(resourceName: string) {
+
+  // ── Filtering helpers ────────────────────────────────────────────────────────
+  // Accept a plain string or a Ref/ComputedRef so callers can pass route params directly.
+
+  function seriesForSector(sector: MaybeRef<string>) {
     return computed(() => {
-      const filtered = data.value.filter(d => d.resource === resourceName);
-      return filtered[filtered.length - 1] || null;
-    });
+      const s = toValue(sector)
+      return allSeries.value.filter(sr => sr.id.endsWith(`::${s}`))
+    })
   }
-  
-  if (autoConnect) {
-    onMounted(connect);
-    onUnmounted(disconnect);
+
+  function seriesForResource(resource: MaybeRef<string>) {
+    return computed(() => {
+      const r = toValue(resource)
+      return allSeries.value.filter(sr => sr.id.startsWith(`${r}::`))
+    })
   }
-  
+
   return {
-    data,
-    isConnected,
-    error,
-    isLoading,
+    // State (read-only to external consumers)
+    allSeries: readonly(allSeries),
+    resources: readonly(resources),
+    sectors:   readonly(sectors),
+    connected: readonly(connected),
+    hydrated:  readonly(hydrated),
+
+    // Lifecycle
+    hydrate,
     connect,
     disconnect,
-    clear,
-    getDataByResource,
-    getDataBySector,
-    getLatestByResource
-  };
-}
 
-export function useLazyAnalyticsStream(maxDataPoints = 200) {
-  const { data: initialData, pending } = useFetch<StreamAnalyticsData[]>('/api/analytics', {
-    default: () => []
-  });
-  
-  const data = ref<AnalyticsDataPoint[]>(
-    (initialData.value || []).map((d, i) => ({
-      ...d,
-      id: `initial-${i}`
-    }))
-  );
-  
-  const stream = useAnalyticsStream({ 
-    maxDataPoints,
-    autoConnect: false 
-  });
-  
-  watch(stream.data, (newData) => {
-    data.value = newData;
-  }, { deep: true });
-  
-  return {
-    data,
-    isConnected: stream.isConnected,
-    error: stream.error,
-    isLoading: computed(() => pending.value || stream.isLoading.value),
-    connect: stream.connect,
-    disconnect: stream.disconnect,
-    getDataByResource: stream.getDataByResource,
-    getDataBySector: stream.getDataBySector,
-    getLatestByResource: stream.getLatestByResource
-  };
+    // Per-view slices
+    seriesForSector,
+    seriesForResource,
+  }
 }

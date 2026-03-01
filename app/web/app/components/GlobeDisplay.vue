@@ -27,7 +27,6 @@ import AppGlobe from './globe/AppGlobe.vue'
 import type { GlobeRegion } from './globe/types'
 
 const props = defineProps<{
-  /** Regions/sectors data from backend API */
   regions?: GlobeRegion[]
 }>()
 
@@ -38,8 +37,6 @@ const emit = defineEmits<{
 
 const regions = computed(() => props.regions || [])
 
-// Match the main-grid height from dashboard layout:
-//   100vh - 104px (header + padding) - 56px (welcome + gap) - 35px (panel header) = 100vh - 195px
 const { height: windowHeight } = useWindowSize()
 const globeHeight = computed(() => Math.max(320, windowHeight.value - 195))
 
@@ -54,10 +51,13 @@ function handleRegionHover(region: GlobeRegion | null) {
 
 <style scoped>
 .globe-panel {
-  background: #080a0e;
-  border: 1px solid rgba(201, 162, 52, 0.2);
-  border-radius: 6px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .panel-header {
@@ -65,7 +65,8 @@ function handleRegionHover(region: GlobeRegion | null) {
   align-items: baseline;
   justify-content: space-between;
   padding: 10px 16px;
-  border-bottom: 1px solid rgba(201, 162, 52, 0.12);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
   font-family: 'JetBrains Mono', monospace;
 }
 
@@ -73,29 +74,17 @@ function handleRegionHover(region: GlobeRegion | null) {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.14em;
-  color: #C9A234;
+  color: var(--primary);
 }
 
 .panel-subtitle {
   font-size: 8.5px;
   letter-spacing: 0.1em;
-  color: rgba(201, 162, 52, 0.4);
+  color: var(--muted-foreground);
 }
 
 .globe-skeleton {
-  background: repeating-linear-gradient(
-    90deg,
-    rgba(201, 162, 52, 0.03) 0px,
-    rgba(201, 162, 52, 0.03) 1px,
-    transparent 1px,
-    transparent 24px
-  ),
-  repeating-linear-gradient(
-    180deg,
-    rgba(201, 162, 52, 0.03) 0px,
-    rgba(201, 162, 52, 0.03) 1px,
-    transparent 1px,
-    transparent 24px
-  );
+  flex: 1;
+  background: var(--muted);
 }
 </style>

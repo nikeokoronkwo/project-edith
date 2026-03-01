@@ -50,6 +50,11 @@ There should also be sections for descriptions for why the forecast is what it i
 #### `/event/:name`
 Displays a complete event report for a given event that has occured, and what that means for given resources and other things, including references to charts and
 
+#### `/reports`
+Shows a continuous list stream of reports, which drop down to show more information of the report, and a little crop of the current analytics graph matching the timestamp of the report, showing its effect on what the trend would've been (compare gradient before then and gradient after, and make some percentage calc to show the percent diff due to the report). 
+
+Show that the name of the reporter and the contact are "[REDACTED]"! Also show a plus button for adding new reports via `/reports/new`
+
 #### `/reports/new`
 Create a new report to submit to the backend, with the following fields:
 - Name (Hero Alias)

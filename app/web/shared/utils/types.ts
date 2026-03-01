@@ -8,6 +8,8 @@ export const reportSchema = z.object({
   relatedReportIds: z.array(z.string()),
   timeStarted: z.string().datetime(),
   metadata: z.string(),
+  // severity is optional on inbound reports (backend may compute/update later)
+  severity: z.enum(['critical','warning','elevated','normal']).optional(),
 });
 
 export type Report = z.infer<typeof reportSchema>;
